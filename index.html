@@ -631,39 +631,26 @@ function signout(){
     var refunds=ts.filter(function(s){return s.refunded;});
     var refStr=refunds.length?refunds.map(function(s){return s.items[0].n.substring(0,20)+' - $'+s.refundAmount.toFixed(2)+' ('+s.refundReason+')';}).join('%0A'):'None';
     var sub2=encodeURIComponent('Mega Wireless Daily Report — '+ds);
- var body2=encodeURIComponent(`MEGA WIRELESS - DAILY REPORT
-${ds}
-========================================
-Closed by: ${curUser ? curUser.name : '-'}
-========================================
-CASH SUMMARY
-Opening Balance: $'+OB.toFixed(2)+'
-Revenue:         $'+rev.toFixed(2)+'
-Tax (9.75%):     $'+tax.toFixed(2)+'
-Refunds:         $'+refunds.reduce(function(s,r){return s+(r.refundAmount||0);},0).toFixed(2)+'
-Closing Balance: $'+closing.toFixed(2)+'
-Transactions:    '+ts.length+'
-Items Sold:      '+units+'
-
-========================================
-SALES
-')+sStr+encodeURIComponent('
-
-========================================
-REFUNDS
-')+refStr+encodeURIComponent('
-
-========================================
-EMPLOYEE CLOCK
-')+clStr+encodeURIComponent('
-
-========================================
-LOW STOCK
-')+lsStr+encodeURIComponent('
-
-Mega Wireless | 4717 Nolensville Pike Nashville TN | (615) 678-5849');
-    window.open('mailto:Megawireless4717@gmail.com?subject='+sub2+'&body='+body2,'_blank');
-  }
+var body2=encodeURIComponent(
+'MEGA WIRELESS - DAILY REPORT\n'+ds+
+'\n========================================\n'+
+'Closed by: '+(curUser?curUser.name:'-')+
+'\n========================================\n\n'+
+'CASH SUMMARY\n'+
+'Opening Balance: $'+OB.toFixed(2)+'\n'+
+'Revenue: $'+rev.toFixed(2)+'\n'+
+'Tax (9.75%): $'+tax.toFixed(2)+'\n'+
+'Refunds: $'+refunds.reduce(function(s,r){return s+(r.refundAmount||0);},0).toFixed(2)+'\n'+
+'Closing Balance: $'+closing.toFixed(2)+'\n'+
+'Transactions: '+ts.length+'\n'+
+'Items Sold: '+units+
+'\n\n========================================\nSALES\n'+sStr+
+'\n\n========================================\nREFUNDS\n'+refStr+
+'\n\n========================================\nEMPLOYEE CLOCK\n'+clStr+
+'\n\n========================================\nLOW STOCK\n'+lsStr+
+'\n\nMega Wireless | 4717 Nolensville Pike Nashville TN | (615) 678-5849'
+);
+  window.open('mailto:Megawireless4717@gmail.com?subject='+sub2+'&body='+body2);
   curUser=null;cart=[];
   document.getElementById('app').style.display='none';
   document.getElementById('auth').style.display='flex';
