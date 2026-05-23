@@ -209,6 +209,7 @@ tr:hover td{background:rgba(0,122,255,.02)}
 .toast.ok{background:#34c759}
 .toast.err{background:#ff3b30}
 </style>
+<!-- Deploy: 20260521000345 -->
 </head>
 <body>
 <div class="toast" id="toast"></div>
@@ -625,32 +626,30 @@ function signout(){
     var ds=today.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
     var ct=today.toDateString();
     var cl=clkLog.filter(function(l){return new Date(l.time).toDateString()===ct;});
-    var clStr=cl.map(function(l){var t=new Date(l.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});return l.name+': '+l.act+' at '+t+(l.dur!=='—'?' ('+l.dur+')':'');}).join('%0A')||'No events';
+    var clStr=cl.map(function(l){var t=new Date(l.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});return l.name+': '+l.act+' at '+t+(l.dur!=='--'?' ('+l.dur+')':'');}).join('%0A')||'No events';
     var sStr=ts.map(function(s,i){var t=new Date(s.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});var its=s.items.map(function(it){return it.n.substring(0,16)+'x'+it.qty;}).join(', ');return (i+1)+'. '+t+' | $'+s.grand.toFixed(2)+' ('+s.pay+')'+(s.refunded?' [REFUNDED]':'')+' | '+its;}).join('%0A')||'No sales';
     var lsStr=getLSItems().map(function(item){return item.n.substring(0,25)+' ('+item.qty+' left)';}).join('%0A')||'None';
     var refunds=ts.filter(function(s){return s.refunded;});
     var refStr=refunds.length?refunds.map(function(s){return s.items[0].n.substring(0,20)+' - $'+s.refundAmount.toFixed(2)+' ('+s.refundReason+')';}).join('%0A'):'None';
-    var sub2=encodeURIComponent('Mega Wireless Daily Report — '+ds);
-var body2=encodeURIComponent(
-'MEGA WIRELESS - DAILY REPORT\n'+ds+
-'\n========================================\n'+
-'Closed by: '+(curUser?curUser.name:'-')+
-'\n========================================\n\n'+
-'CASH SUMMARY\n'+
-'Opening Balance: $'+OB.toFixed(2)+'\n'+
-'Revenue: $'+rev.toFixed(2)+'\n'+
-'Tax (9.75%): $'+tax.toFixed(2)+'\n'+
-'Refunds: $'+refunds.reduce(function(s,r){return s+(r.refundAmount||0);},0).toFixed(2)+'\n'+
-'Closing Balance: $'+closing.toFixed(2)+'\n'+
-'Transactions: '+ts.length+'\n'+
-'Items Sold: '+units+
-'\n\n========================================\nSALES\n'+sStr+
-'\n\n========================================\nREFUNDS\n'+refStr+
-'\n\n========================================\nEMPLOYEE CLOCK\n'+clStr+
-'\n\n========================================\nLOW STOCK\n'+lsStr+
-'\n\nMega Wireless | 4717 Nolensville Pike Nashville TN | (615) 678-5849'
-);
-  window.open('mailto:Megawireless4717@gmail.com?subject='+sub2+'&body='+body2);
+    var sub2=encodeURIComponent('Mega Wireless Daily Report -- '+ds);
+    var closedBy=curUser?curUser.name:'Unknown';
+    var refundTotal=refunds.reduce(function(s,r){return s+(r.refundAmount||0);},0).toFixed(2);
+    var rptLines='MEGA WIRELESS - DAILY REPORT%0A'+ds+'%0AClosed by: '+closedBy+'%0A';
+    rptLines+='========================================%0ACASH SUMMARY%0A';
+    rptLines+='Opening: $'+OB.toFixed(2)+'%0A';
+    rptLines+='Revenue: $'+rev.toFixed(2)+'%0A';
+    rptLines+='Tax: $'+tax.toFixed(2)+'%0A';
+    rptLines+='Refunds: $'+refundTotal+'%0A';
+    rptLines+='Closing: $'+closing.toFixed(2)+'%0A';
+    rptLines+='Orders: '+ts.length+'%0AUnits: '+units+'%0A';
+    rptLines+='========================================%0ASALES%0A'+sStr+'%0A';
+    rptLines+='========================================%0AREFUNDS%0A'+refStr+'%0A';
+    rptLines+='========================================%0ACLOCK%0A'+clStr+'%0A';
+    rptLines+='LOW STOCK%0A'+lsStr+'%0A';
+    rptLines+='Mega Wireless | 4717 Nolensville Pike Nashville TN | (615) 678-5849';
+    var body2=rptLines;
+    window.open('mailto:Megawireless4717@gmail.com?subject='+sub2+'&body='+body2,'_blank');
+  }
   curUser=null;cart=[];
   document.getElementById('app').style.display='none';
   document.getElementById('auth').style.display='flex';
@@ -708,12 +707,12 @@ function filterItems(){
     var low=d.qty>0&&d.qty<=LS_TH;
     var nn=n.length>46?n.substring(0,46)+'...':n;
     var ph=d.sell>0?('<div class="ip">$'+d.sell.toFixed(2)+'</div>'):'<div class="np">Tap to set price</div>';
-    var sq=d.qty>0?('<div class="iq'+(low?' low':'')+'">Qty: '+d.qty+(low?' ⚠':'')+'</div>'):'<div class="iq">Qty: —</div>';
+    var sq=d.qty>0?('<div class="iq'+(low?' low':'')+'">Qty: '+d.qty+(low?' ⚠':'')+'</div>'):'<div class="iq">Qty: --</div>';
     var sbc=d.bc?('<div class="ibc">'+d.bc+'</div>'):'';
     h+='<div class="ic'+(low?' low':'')+'" onclick="addI('+i+')">'+(low?'<div class="ldot"></div>':'')+
        '<div class="in">'+nn+'</div>'+ph+sq+sbc+'</div>';
   }
-  if(items.length>180)h+='<div style="grid-column:1/-1;text-align:center;color:#aaa;font-size:11px;padding:10px">'+(items.length-180)+' more — refine search</div>';
+  if(items.length>180)h+='<div style="grid-column:1/-1;text-align:center;color:#aaa;font-size:11px;padding:10px">'+(items.length-180)+' more -- refine search</div>';
   document.getElementById('igrid').innerHTML=h;
 }
 
@@ -886,7 +885,7 @@ function confirmRefund(){
   // سجل الـ refund
   s.refunded=true;
   s.refundAmount=amount;
-  s.refundReason=reason||'—';
+  s.refundReason=reason||'--';
   s.refundTime=new Date().toISOString();
   s.refundBy=curUser.name;
   sv('sales',sales);
@@ -993,7 +992,7 @@ function saveNewItem(){
     inv[k]={cost:parseFloat(document.getElementById('ai-cost').value)||0,sell:parseFloat(document.getElementById('ai-sell').value)||0,qty:1,bc:imeis[0]||''};
     sv('inv',inv);
   } else {
-    // أكتر من واحد — كل جهاز بـ IMEI خاص
+    // أكتر من واحد -- كل جهاز بـ IMEI خاص
     var cost=parseFloat(document.getElementById('ai-cost').value)||0;
     var sell=parseFloat(document.getElementById('ai-sell').value)||0;
     for(var i=0;i<qty;i++){
@@ -1024,7 +1023,7 @@ function checkLS(){
     badge.style.display='block';badge.textContent='⚠ '+items.length+' Low';
     if(bn){bn.className='lsbn on';
       var bt=document.getElementById('lsbt');
-      if(bt)bt.textContent=items.length+' item(s) low — '+items.slice(0,2).map(function(i){return i.n.substring(0,18)+'('+i.qty+')';}).join(', ');
+      if(bt)bt.textContent=items.length+' item(s) low -- '+items.slice(0,2).map(function(i){return i.n.substring(0,18)+'('+i.qty+')';}).join(', ');
     }
   }else{badge.style.display='none';if(bn)bn.className='lsbn';}
 }
@@ -1060,23 +1059,33 @@ function renderInv(){
     rows.push({i:idx++,n:all[i].n,c:all[i].c,d:d,low:low});
   }
   document.getElementById('invcnt').textContent=rows.length;
-  var h='';
+  var tb=document.getElementById('invtb');
+  tb.innerHTML='';
   var shown=rows.slice(0,500);
   for(var i=0;i<shown.length;i++){
     var r=shown[i];
-    var ns=r.n.replace(/\\/g,'').replace(/'/g,'').replace(/"/g,'');
-    h+='<tr>'+
-      '<td style="color:#aaa">'+r.i+'</td>'+
-      '<td style="font-weight:500">'+r.n.substring(0,50)+'</td>'+
-      '<td style="font-family:monospace;font-size:10px;color:#aaa">'+(r.d.bc||'—')+'</td>'+
-      '<td><span class="bg '+(CMAP[r.c]||'bo')+'">'+r.c+'</span></td>'+
-      '<td><span class="ed" onclick="openPrice(\''+ns+'\',\''+r.c+'\',false)">'+(r.d.cost>0?'$'+r.d.cost.toFixed(2):'—')+'</span></td>'+
-      '<td><span class="ed" onclick="openPrice(\''+ns+'\',\''+r.c+'\',false)">'+(r.d.sell>0?'$'+r.d.sell.toFixed(2):'—')+'</span></td>'+
-      '<td><span class="ed" onclick="openPrice(\''+ns+'\',\''+r.c+'\',false)">'+(r.d.qty>0?r.d.qty:'—')+'</span></td>'+
-      '<td>'+(r.low?'<span class="bg bl">⚠ Low</span>':(r.d.qty>LS_TH?'<span class="bg bs">In Stock</span>':'<span class="bg bo">—</span>'))+'</td>'+
-      '</tr>';
+    var ns=r.n.replace(/['"\\]/g,'');
+    var tr=document.createElement('tr');
+    var cost=r.d.cost>0?('$'+r.d.cost.toFixed(2)):'--';
+    var sell=r.d.sell>0?('$'+r.d.sell.toFixed(2)):'--';
+    var qty=r.d.qty>0?String(r.d.qty):'--';
+    var status=r.low?'<span class="bg bl">Low</span>':(r.d.qty>LS_TH?'<span class="bg bs">OK</span>':'<span class="bg bo">--</span>');
+    var bgcls=CMAP[r.c]||'bo';
+    tr.innerHTML='<td style="color:#aaa">'+r.i+'</td>'+
+      '<td style="font-weight:500">'+r.n.substring(0,48)+'</td>'+
+      '<td style="font-family:monospace;font-size:10px;color:#aaa">'+(r.d.bc||'--')+'</td>'+
+      '<td><span class="bg '+bgcls+'">'+r.c+'</span></td>'+
+      '<td><span class="ed" id="ed-c-'+i+'">'+cost+'</span></td>'+
+      '<td><span class="ed" id="ed-s-'+i+'">'+sell+'</span></td>'+
+      '<td><span class="ed" id="ed-q-'+i+'">'+qty+'</span></td>'+
+      '<td>'+status+'</td>';
+    (function(name,cat){
+      tr.querySelectorAll('.ed').forEach(function(el){
+        el.onclick=function(){openPrice(name,cat,false);};
+      });
+    })(r.n,r.c);
+    tb.appendChild(tr);
   }
-  document.getElementById('invtb').innerHTML=h;
 }
 
 function exportCSV(){
@@ -1099,7 +1108,7 @@ function renderClock(){
   var h='';
   for(i=0;i<emps.length;i++){
     var u=emps[i],st=clkSt[u.id],isIn=st&&st.status==='in';
-    var since=(st&&st.time)?new Date(st.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'—';
+    var since=(st&&st.time)?new Date(st.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'--';
     var sc=isIn?'in':'out',st2=isIn?('● In since '+since):'○ Not clocked in';
     var bc=isIn?'out':'in',bt=isIn?'🔴 Clock Out':'🟢 Clock In';
     h+='<div class="ccard">'+
@@ -1115,9 +1124,9 @@ function renderClock(){
 
 function togClk(id,name){
   var now=new Date(),st=clkSt[id],isIn=st&&st.status==='in';
-  var dur='—';
+  var dur='--';
   if(isIn&&st.time){var m=Math.round((now-new Date(st.time))/60000);dur=m<60?m+'m':Math.floor(m/60)+'h '+(m%60)+'m';}
-  clkLog.unshift({id:id,name:name,act:isIn?'Clock Out':'Clock In',time:now.toISOString(),dur:isIn?dur:'—'});
+  clkLog.unshift({id:id,name:name,act:isIn?'Clock Out':'Clock In',time:now.toISOString(),dur:isIn?dur:'--'});
   clkSt[id]={status:isIn?'out':'in',time:now.toISOString()};
   sv('clk',clkSt);sv('clog',clkLog);renderClock();
   toast(name+' clocked '+(isIn?'out':'in')+'!','ok');
@@ -1208,24 +1217,15 @@ function sendReport(){
   var ds=today.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var ct=new Date().toDateString();
   var cl=clkLog.filter(function(l){return new Date(l.time).toDateString()===ct;});
-  var clStr=cl.map(function(l){var t=new Date(l.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});return l.name+': '+l.act+' at '+t+(l.dur!=='—'?' ('+l.dur+')':'');}).join('%0A')||'No events';
+  var clStr=cl.map(function(l){var t=new Date(l.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});return l.name+': '+l.act+' at '+t+(l.dur!=='--'?' ('+l.dur+')':'');}).join('%0A')||'No events';
   var sStr=ts.map(function(s,i){var t=new Date(s.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});var its=s.items.map(function(it){return it.n.substring(0,16)+'x'+it.qty;}).join(', ');return (i+1)+'. '+t+' | $'+s.grand.toFixed(2)+' ('+s.pay+') | '+its;}).join('%0A')||'No sales';
   var lsStr=getLSItems().map(function(i){return i.n.substring(0,25)+' ('+i.qty+' left)';}).join('%0A')||'None';
   var emailEl=document.getElementById('s-em');
   var email=emailEl?emailEl.value:RE;
-  var sub=encodeURIComponent('Mega Wireless Daily Report — '+ds);
-var body=encodeURIComponent(
-'MEGA WIRELESS - DAILY REPORT\n'+ds+
-'\n========================================\n'+
-'CASH SUMMARY\n'+
-'Opening Balance: $'+OB.toFixed(2)+'\n'+
-'Revenue: $'+rev.toFixed(2)+'\n'+
-'Tax: $'+tax.toFixed(2)+'\n'+
-'Transactions: '+ts.length+'\n'
-);
-
-window.location.href='mailto:'+email+'?subject='+sub+'&body='+body;
-toast('Opening email...','ok');
+  var sub=encodeURIComponent('Mega Wireless Daily Report -- '+ds);
+  var body=encodeURIComponent('MEGA WIRELESS -- DAILY REPORT\n'+ds+'\n========================================\n\nCASH SUMMARY\nOpening Balance: $'+OB.toFixed(2)+'\nRevenue:         $'+rev.toFixed(2)+'\nTax (9.75%):     $'+tax.toFixed(2)+'\nClosing Balance: $'+closing.toFixed(2)+'\nTransactions:    '+ts.length+'\nItems Sold:      '+units+'\n\n========================================\nSALES\n')+sStr+encodeURIComponent('\n\n========================================\nEMPLOYEE CLOCK\n')+clStr+encodeURIComponent('\n\n========================================\nLOW STOCK\n')+lsStr+encodeURIComponent('\n\nMega Wireless | 4717 Nolensville Pike, Nashville TN | (615) 678-5849');
+  window.location.href='mailto:'+email+'?subject='+sub+'&body='+body;
+  toast('Opening email...','ok');
 }
 
 // SETTINGS - EMPLOYEES
