@@ -1227,8 +1227,8 @@ function sendReport(){
   var emailEl=document.getElementById('s-em');
   var email=emailEl?emailEl.value:RE;
   var sub=encodeURIComponent('Mega Wireless Daily Report — '+ds);
-  var body=encodeURIComponent('MEGA WIRELESS — DAILY REPORT\n'+ds+'\n========================================\n\nCASH SUMMARY\nOpening Balance: $'+OB.toFixed(2)+'\nRevenue:         $'+rev.toFixed(2)+'\nTax (9.75%):     $'+tax.toFixed(2)+'\nClosing Balance: $'+closing.toFixed(2)+'\nTransactions:    '+ts.length+'\nItems Sold:      '+units+'\n\n========================================\nSALES\n')+sStr+encodeURIComponent('\n\n========================================\nEMPLOYEE CLOCK\n')+clStr+encodeURIComponent('\n\n========================================\nLOW STOCK\n')+lsStr+encodeURIComponent('\n\nMega Wireless | 4717 Nolensville Pike, Nashville TN | (615) 678-5849');
-  window.location.href='mailto:'+email+'?subject='+sub+'&body='+body;
+  var body=encodeURIComponent(`MEGA WIRELESS - DAILY REPORT\n'+ds+'\n========================================\n\nCASH SUMMARY\nOpening Balance: $'+OB.toFixed(2)+'\nRevenue:         $'+rev.toFixed(2)+'\nTax (9.75%):     $'+tax.toFixed(2)+'\nClosing Balance: $'+closing.toFixed(2)+'\nTransactions:    '+ts.length+'\nItems Sold:      '+units+'\n\n========================================\nSALES\n')+sStr+encodeURIComponent('\n\n========================================\nEMPLOYEE CLOCK\n')+clStr+encodeURIComponent('\n\n========================================\nLOW STOCK\n')+lsStr+encodeURIComponent('\n\nMega Wireless | 4717 Nolensville Pike, Nashville TN | (615) 678-5849');
+  window.location.href='mailto:'+email+'?subject='+sub+'&body='+body`);
   toast('Opening email...','ok');
 }
 
