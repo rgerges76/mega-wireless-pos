@@ -286,6 +286,7 @@ tr:hover td{background:rgba(0,122,255,.02)}
       <button class="pm" id="pm-card" onclick="setPM('card')">💳 Card</button>
       <button class="pm" id="pm-zelle" onclick="setPM('zelle')">📱 Zelle</button>
      </div>
+    <div id="card-last4-wrap" style="display:none;margin-bottom:8px"><input type="text" id="card-last4" class="fi" placeholder="Last 4 digits of card" maxlength="4" inputmode="numeric" style="text-align:center;font-size:18px;font-weight:700;letter-spacing:6px"></div>
      <button class="chgbtn" id="chgbtn" onclick="openCharge()" disabled>Charge Customer</button>
      <button class="clrbtn" onclick="clearCart()">Clear Sale</button>
     </div>
@@ -770,6 +771,9 @@ function setPM(m){
   payM=m;
   var ms=['cash','card','zelle'];
   for(var i=0;i<ms.length;i++)document.getElementById('pm-'+ms[i]).className='pm'+(ms[i]===m?' on':'');
+  var wrap=document.getElementById('card-last4-wrap');
+  if(wrap) wrap.style.display=m==='card'?'block':'none';
+  if(m!=='card'){var el=document.getElementById('card-last4');if(el)el.value='';}
 }
 
 function chQ(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart();}
@@ -787,7 +791,9 @@ function openCharge(){
 function completeSale(){
   var sub=0;for(var i=0;i<cart.length;i++)sub+=cart[i].price*cart[i].qty;
   var tax=taxOn?sub*TAX:0,grand=sub+tax;
-  sales.push({id:Date.now(),time:new Date().toISOString(),cashier:curUser.name,items:cart.slice(),sub:sub,tax:tax,grand:grand,pay:payM,taxOn:taxOn});
+  var last4='';
+  if(payM==='card'){var l4el=document.getElementById('card-last4');if(l4el)last4=l4el.value.trim();}
+  sales.push({id:Date.now(),time:new Date().toISOString(),cashier:curUser.name,items:cart.slice(),sub:sub,tax:tax,grand:grand,pay:payM,taxOn:taxOn,last4:last4});
   sv('sales',sales);
   for(var i=0;i<cart.length;i++){
     var k=gk(cart[i].n,cart[i].c);
@@ -1200,7 +1206,7 @@ function renderRpts(){
       '<td>$'+s.sub.toFixed(2)+'</td>'+
       '<td style="color:#ff9500">'+(s.taxOn?'$'+s.tax.toFixed(2):'No tax')+'</td>'+
       '<td style="font-weight:700;color:'+(s.refunded?'#aaa':'#007aff')+'">$'+s.grand.toFixed(2)+' '+refTag+'</td>'+
-      '<td style="color:'+pc+'">● '+s.pay+'</td>'+
+      '<td style="color:'+pc+'">● '+s.pay+(s.last4?' ****'+s.last4:'')+'</td>'+
       '<td>'+refBtn+'</td>'+
       '</tr>';
   }
