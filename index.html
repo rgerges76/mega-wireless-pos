@@ -631,7 +631,7 @@ function signout(){
     var refunds=ts.filter(function(s){return s.refunded;});
     var refStr=refunds.length?refunds.map(function(s){return s.items[0].n.substring(0,20)+' - $'+s.refundAmount.toFixed(2)+' ('+s.refundReason+')';}).join('%0A'):'None';
     var sub2=encodeURIComponent('Mega Wireless Daily Report — '+ds);
-    var body2=encodeURIComponent('MEGA WIRELESS — DAILY REPORT
+    var body2=encodeURIComponent(`MEGA WIRELESS - DAILY REPORT
 '+ds+'
 Closed by: '+(curUser?curUser.name:'—')+'
 ========================================
