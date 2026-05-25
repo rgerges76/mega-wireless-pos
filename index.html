@@ -371,6 +371,19 @@ tr:hover td{background:rgba(0,122,255,.02)}
  </div>
 </div>
 
+<!-- RECEIPT MODAL -->
+<div class="ov" id="ov-receipt">
+ <div class="modal" style="width:320px;padding:0;overflow:hidden">
+  <div id="receipt-body" style="background:#fff;padding:20px;font-family:monospace">
+   <!-- Receipt content here -->
+  </div>
+  <div style="display:flex;gap:0;border-top:1px solid #e5e5ea">
+   <button onclick="printReceipt()" style="flex:1;padding:13px;background:#007aff;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🖨️ Print</button>
+   <button onclick="closeOv('ov-receipt')" style="flex:1;padding:13px;background:#f2f2f7;border:none;border-left:1px solid #e5e5ea;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#1c1c1e">Close</button>
+  </div>
+ </div>
+</div>
+
 <!-- REFUND MODAL -->
 <div class="ov" id="ov-refund">
  <div class="modal" style="width:380px">
@@ -460,7 +473,11 @@ tr:hover td{background:rgba(0,122,255,.02)}
    <div class="fg"><label class="fl">Sell Price ($)</label><input type="number" class="fi" id="ai-sell" placeholder="0.00" step="0.01"></div>
   </div>
   <label class="fl">Quantity</label>
-  <input type="number" class="fi" id="ai-qty" placeholder="1" min="1" value="1" oninput="genIMEI(this.value)">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+   <button onclick="var q=parseInt(document.getElementById('ai-qty').value)||1;if(q>1){document.getElementById('ai-qty').value=q-1;genIMEI(q-1);}" style="width:36px;height:36px;border-radius:50%;background:#f2f2f7;border:1.5px solid #e5e5ea;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">−</button>
+   <input type="number" class="fi" id="ai-qty" placeholder="1" min="1" value="1" oninput="genIMEI(this.value)" style="text-align:center;font-size:18px;font-weight:700;flex:1">
+   <button onclick="var q=parseInt(document.getElementById('ai-qty').value)||1;document.getElementById('ai-qty').value=q+1;genIMEI(q+1);" style="width:36px;height:36px;border-radius:50%;background:#007aff;border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">+</button>
+  </div>
   <div id="imei-fields" style="margin-top:10px;display:flex;flex-direction:column;gap:7px"></div>
   <div style="display:flex;gap:8px;margin-top:12px">
    <button class="mb mbb" style="flex:1" onclick="saveNewItem()">Add Item</button>
@@ -800,8 +817,11 @@ function completeSale(){
     if(!inv[k])inv[k]={cost:0,sell:0,qty:0,bc:''};
     inv[k].qty=Math.max(0,(inv[k].qty||0)-cart[i].qty);
   }
-  sv('inv',inv);closeOv('ov-ch');clearCart();checkLS();renderInv();
+  sv('inv',inv);closeOv('ov-ch');
+  var lastSaleId=sales[sales.length-1].id;
+  clearCart();checkLS();renderInv();
   toast('Sale complete! $'+grand.toFixed(2),'ok');
+  setTimeout(function(){showReceipt(lastSaleId);},300);
 }
 
 // BARCODE
@@ -944,11 +964,20 @@ function savePrice(){
 
   if(priceCB.add&&inv[k].sell>0){
     var pn=priceCB.n,pc=priceCB.c,ps=inv[k].sell;
-    var ex=null;for(var i=0;i<cart.length;i++)if(cart[i].n===pn&&cart[i].c===pc){ex=cart[i];break;}
-    if(ex)ex.qty++;else cart.push({n:pn,c:pc,qty:1,price:ps});
-    renderCart();toast(pn.substring(0,22)+' added','ok');
+    // نشوف لو موجود بالفعل في الكارت (ممكن addI ضافته)
+    var alreadyInCart=false;
+    for(var i=0;i<cart.length;i++){
+      if(cart[i].n===pn&&cart[i].c===pc){alreadyInCart=true;break;}
+    }
+    if(!alreadyInCart){
+      cart.push({n:pn,c:pc,qty:1,price:ps});
+      renderCart();toast(pn.substring(0,22)+' added','ok');
+    } else {
+      toast('Saved!','ok');
+    }
+  } else {
+    toast('Saved!','ok');
   }
-  toast('Saved!','ok');
 }
 
 // ADD ITEM
@@ -956,23 +985,38 @@ function openAddItem(){
   var ids=['ai-n','ai-cost','ai-sell'];
   for(var i=0;i<ids.length;i++)document.getElementById(ids[i]).value='';
   document.getElementById('ai-qty').value='1';
-  genIMEI(1);
+  setTimeout(function(){genIMEI(1);},100);
   document.getElementById('ov-ai').className='ov on';
   setTimeout(function(){document.getElementById('ai-n').focus();},100);
 }
 
 function genIMEI(qty){
-  var n=parseInt(qty)||1;if(n>20)n=20;
+  var n=parseInt(qty)||1;
+  if(n>20)n=20;
+  if(n<1)n=1;
   var wrap=document.getElementById('imei-fields');
-  if(n<=0){wrap.innerHTML='';return;}
-  var h='<label class="fl">IMEI / Barcode Numbers</label>';
+  if(!wrap)return;
+  wrap.innerHTML='';
+  var lbl=document.createElement('label');
+  lbl.className='fl';
+  lbl.textContent='IMEI / Barcode Numbers';
+  wrap.appendChild(lbl);
   for(var i=0;i<n;i++){
-    h+='<div style="display:flex;align-items:center;gap:8px">'+
-      '<div style="width:22px;height:22px;border-radius:50%;background:#007aff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">'+(i+1)+'</div>'+
-      '<input type="text" class="fi" id="imei-'+i+'" placeholder="IMEI or Barcode #'+(i+1)+'" style="font-family:monospace;font-size:12px;margin-bottom:0">'+
-      '</div>';
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:6px';
+    var num=document.createElement('div');
+    num.style.cssText='width:24px;height:24px;border-radius:50%;background:#007aff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0';
+    num.textContent=String(i+1);
+    var inp=document.createElement('input');
+    inp.type='text';
+    inp.className='fi';
+    inp.id='imei-'+i;
+    inp.placeholder='IMEI or Barcode #'+(i+1);
+    inp.style.cssText='font-family:monospace;font-size:12px;margin-bottom:0;flex:1';
+    row.appendChild(num);
+    row.appendChild(inp);
+    wrap.appendChild(row);
   }
-  wrap.innerHTML=h;
 }
 
 function saveNewItem(){
@@ -1199,6 +1243,7 @@ function renderRpts(){
     var pc=s.pay==='cash'?'#34c759':s.pay==='card'?'#007aff':'#af52de';
     var refTag=s.refunded?'<span style="font-size:9px;background:#fff0f0;color:#ff3b30;padding:1px 5px;border-radius:4px;font-weight:600">REFUNDED</span>':'';
     var refBtn=!s.refunded?('<button onclick="openRefund('+s.id+')" style="background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit">↩ Refund</button>'):'<span style="font-size:10px;color:#aaa">Done</span>';
+    var rcptBtn='<button onclick="showReceipt('+s.id+')" style="background:rgba(0,122,255,.1);border:1px solid rgba(0,122,255,.3);color:#007aff;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:4px">🧾</button>';
     h+='<tr style="'+(s.refunded?'opacity:0.5;':'')+'">'+
       '<td style="color:#aaa">'+dt+' '+t+'</td>'+
       '<td>'+s.cashier.split(' ')[0]+'</td>'+
@@ -1207,7 +1252,7 @@ function renderRpts(){
       '<td style="color:#ff9500">'+(s.taxOn?'$'+s.tax.toFixed(2):'No tax')+'</td>'+
       '<td style="font-weight:700;color:'+(s.refunded?'#aaa':'#007aff')+'">$'+s.grand.toFixed(2)+' '+refTag+'</td>'+
       '<td style="color:'+pc+'">● '+s.pay+(s.last4?' ****'+s.last4:'')+'</td>'+
-      '<td>'+refBtn+'</td>'+
+      '<td>'+refBtn+rcptBtn+'</td>'+
       '</tr>';
   }
   tb.innerHTML=h;
@@ -1336,6 +1381,83 @@ function toast(msg,type){
   el.textContent=msg;el.className='toast on '+(type||'');
   clearTimeout(toastT);toastT=setTimeout(function(){el.className='toast';},2200);
 }
+
+// ===== RECEIPT =====
+function buildReceipt(s){
+  var d=new Date(s.time);
+  var dateStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  var timeStr=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  var line='--------------------------------';
+  var h='';
+  h+='<div style="text-align:center;margin-bottom:12px">';
+  h+='<div style="font-size:16px;font-weight:700;letter-spacing:2px">MEGA WIRELESS</div>';
+  h+='<div style="font-size:11px;margin-top:3px">4717 Nolensville Pike</div>';
+  h+='<div style="font-size:11px">Nashville, TN 37211</div>';
+  h+='<div style="font-size:11px">(615) 678-5849</div>';
+  h+='</div>';
+  h+='<div style="border-top:1px dashed #999;margin:8px 0"></div>';
+  h+='<div style="font-size:11px;display:flex;justify-content:space-between"><span>Date:</span><span>'+dateStr+' '+timeStr+'</span></div>';
+  h+='<div style="font-size:11px;display:flex;justify-content:space-between"><span>Cashier:</span><span>'+s.cashier.split(' ')[0]+'</span></div>';
+  h+='<div style="font-size:11px;display:flex;justify-content:space-between"><span>Receipt #:</span><span>'+String(s.id).slice(-6)+'</span></div>';
+  h+='<div style="border-top:1px dashed #999;margin:8px 0"></div>';
+  // Items
+  for(var i=0;i<s.items.length;i++){
+    var it=s.items[i];
+    h+='<div style="font-size:11px;margin-bottom:4px">';
+    h+='<div>'+it.n.substring(0,32)+'</div>';
+    h+='<div style="display:flex;justify-content:space-between;color:#555"><span>  '+it.qty+' x $'+it.price.toFixed(2)+'</span><span>$'+(it.qty*it.price).toFixed(2)+'</span></div>';
+    h+='</div>';
+  }
+  h+='<div style="border-top:1px dashed #999;margin:8px 0"></div>';
+  h+='<div style="font-size:11px;display:flex;justify-content:space-between"><span>Subtotal:</span><span>$'+s.sub.toFixed(2)+'</span></div>';
+  if(s.taxOn){
+    h+='<div style="font-size:11px;display:flex;justify-content:space-between"><span>Tax (9.75%):</span><span>$'+s.tax.toFixed(2)+'</span></div>';
+  }else{
+    h+='<div style="font-size:11px;display:flex;justify-content:space-between;color:#888"><span>Tax:</span><span>Non-taxable</span></div>';
+  }
+  h+='<div style="border-top:2px solid #333;margin:8px 0"></div>';
+  h+='<div style="font-size:14px;font-weight:700;display:flex;justify-content:space-between"><span>TOTAL:</span><span>$'+s.grand.toFixed(2)+'</span></div>';
+  h+='<div style="border-top:1px dashed #999;margin:8px 0"></div>';
+  var payTxt=s.pay.toUpperCase();
+  if(s.pay==='card'&&s.last4) payTxt+=' ****'+s.last4;
+  h+='<div style="font-size:11px;display:flex;justify-content:space-between"><span>Payment:</span><span>'+payTxt+'</span></div>';
+  if(s.refunded){
+    h+='<div style="font-size:11px;color:#ff3b30;font-weight:700;text-align:center;margin-top:6px">** REFUNDED **</div>';
+  }
+  h+='<div style="border-top:1px dashed #999;margin:10px 0"></div>';
+  h+='<div style="text-align:center;font-size:11px;color:#555">';
+  h+='<div>Thank you for your business!</div>';
+  h+='<div style="margin-top:3px">megawirelessusa.com</div>';
+  h+='</div>';
+  return h;
+}
+
+function showReceipt(saleId){
+  var s=null;
+  for(var i=0;i<sales.length;i++)if(sales[i].id===saleId){s=sales[i];break;}
+  if(!s)return;
+  document.getElementById('receipt-body').innerHTML=buildReceipt(s);
+  document.getElementById('ov-receipt').className='ov on';
+}
+
+function showLastReceipt(){
+  if(!sales.length){toast('No sales yet','err');return;}
+  var last=sales[sales.length-1];
+  showReceipt(last.id);
+}
+
+function printReceipt(){
+  var body=document.getElementById('receipt-body').innerHTML;
+  var w=window.open('','_blank','width=400,height=600');
+  w.document.write('<html><head><title>Receipt</title>');
+  w.document.write('<style>body{font-family:monospace;margin:20px;font-size:12px}@media print{body{margin:0}}</style>');
+  w.document.write('</head><body>'+body+'</body></html>');
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
+// ===== END RECEIPT =====
 
 // START
 init();
