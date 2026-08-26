@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mega Wireless Repairs</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+body{background:#f4f7fb;color:#0f172a;font-family:Inter,system-ui,sans-serif;min-height:100vh}
+.rep-shell{max-width:1500px;margin:0 auto;padding:18px}
+.rep-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.rep-head h1{margin:0;font-size:25px}.rep-head p{margin:4px 0 0;color:#64748b;font-size:12px}
+.rep-nav{display:flex;gap:8px}.rep-nav a{padding:9px 13px;border-radius:10px;text-decoration:none;font-weight:700;font-size:12px;background:#fff;border:1px solid #dbe2ea;color:#334155}.rep-nav a.primary{background:#007aff;color:#fff;border-color:#007aff}
+.rep-grid{display:grid;grid-template-columns:minmax(360px,470px) 1fr;gap:16px;align-items:start}
+.panel{background:#fff;border:1px solid #dbe2ea;border-radius:16px;padding:16px;box-shadow:0 4px 18px rgba(15,23,42,.05)}
+.panel h2{margin:0 0 12px;font-size:17px}.formgrid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}
+.lbl{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#64748b;margin:0 0 5px}.field{width:100%;border:1.5px solid #dbe2ea;border-radius:10px;padding:9px 10px;font:inherit;font-size:12px;outline:none;background:#fff}.field:focus{border-color:#007aff}.field[readonly]{background:#f8fafc;font-weight:800;color:#007aff}
+textarea.field{min-height:70px;resize:vertical}.form-actions{display:flex;gap:8px;margin-top:12px}.form-actions button{flex:1;border:0;border-radius:10px;padding:10px;font-weight:800;cursor:pointer}.save{background:#007aff;color:#fff}.clear{background:#eef2f7;color:#475569}
+.listbar{display:flex;align-items:center;gap:10px;margin-bottom:10px}.listbar input{flex:1}.count{font-size:11px;color:#64748b;white-space:nowrap}.tablewrap{overflow:auto;max-height:72vh;border:1px solid #e5e7eb;border-radius:12px}.rtable{width:100%;border-collapse:collapse;min-width:980px}.rtable th{position:sticky;top:0;background:#f8fafc;text-align:left;padding:10px;font-size:10px;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e5e7eb;z-index:1}.rtable td{padding:10px;border-bottom:1px solid #eef2f7;font-size:11px;vertical-align:top}.rtable small{color:#94a3b8}.actions{white-space:nowrap}.actions button{border:1px solid #dbe2ea;background:#fff;border-radius:7px;padding:5px 7px;margin:0 3px 3px 0;font-size:10px;font-weight:700;cursor:pointer}.actions .pay{background:#007aff;border-color:#007aff;color:#fff}.actions .danger{color:#dc2626}.status{display:inline-block;padding:4px 7px;border-radius:20px;font-size:9px;font-weight:800}.st-received{background:#e0f2fe;color:#0369a1}.st-progress{background:#ede9fe;color:#6d28d9}.st-wait{background:#fff7ed;color:#c2410c}.st-ready{background:#ecfdf5;color:#047857}.st-done{background:#dcfce7;color:#166534}.empty{text-align:center;color:#94a3b8;padding:30px!important}
+@media(max-width:980px){.rep-grid{grid-template-columns:1fr}.rep-head{align-items:flex-start;flex-direction:column}.rep-nav{width:100%}.rep-nav a{flex:1;text-align:center}}
+</style>
+</head>
+<body onload="initRepairs()">
+<div class="rep-shell">
+  <div class="rep-head">
+    <div><h1>MEGA WIRELESS · Repairs</h1><p>Repair intake, balances, status tracking and direct POS checkout.</p></div>
+    <div class="rep-nav"><a href="index.html">Main POS</a><a class="primary" href="pos.html">Open Checkout</a><a href="admin/">Admin</a></div>
+  </div>
+  <div class="rep-grid">
+    <section class="panel">
+      <h2 id="formTitle">New Repair</h2>
+      <div class="formgrid2">
+        <div><label class="lbl">Customer Name *</label><input id="rCustomer" class="field" autocomplete="name"></div>
+        <div><label class="lbl">Phone *</label><input id="rPhone" class="field" autocomplete="tel"></div>
+        <div><label class="lbl">Device *</label><input id="rDevice" class="field" placeholder="iPhone 14 Pro Max"></div>
+        <div><label class="lbl">IMEI / Serial</label><input id="rImei" class="field" autocomplete="off"></div>
+        <div class="full"><label class="lbl">Repair Issue *</label><textarea id="rIssue" class="field" placeholder="Customer complaint / repair requested"></textarea></div>
+        <div class="full"><label class="lbl">Diagnosis</label><textarea id="rDiagnosis" class="field" placeholder="Technician diagnosis"></textarea></div>
+        <div><label class="lbl">Technician</label><input id="rTech" class="field"></div>
+        <div><label class="lbl">Status</label><select id="rStatus" class="field"><option>Received</option><option>In Progress</option><option>Waiting for Parts</option><option>Ready for Pickup</option><option>Completed</option><option>Paid</option></select></div>
+        <div class="full"><label class="lbl">Parts Used</label><input id="rParts" class="field" placeholder="Screen, battery, charging port..."></div>
+        <div><label class="lbl">Parts Cost</label><input id="rPartsCost" class="field" type="number" min="0" step="0.01"></div>
+        <div><label class="lbl">Repair Total</label><input id="rTotal" class="field" type="number" min="0" step="0.01"></div>
+        <div><label class="lbl">Deposit</label><input id="rDeposit" class="field" type="number" min="0" step="0.01"></div>
+        <div><label class="lbl">Balance Due</label><input id="rBalance" class="field" value="0.00" readonly></div>
+      </div>
+      <div class="form-actions"><button id="saveRepairBtn" class="save" onclick="saveRepair()">Save Repair</button><button class="clear" onclick="clearRepairForm()">Clear</button></div>
+    </section>
+    <section class="panel">
+      <div class="listbar"><input id="repairSearch" class="field" placeholder="Search customer, phone, IMEI, device, status..." oninput="renderRepairs()"><span id="repairCount" class="count"></span></div>
+      <div class="tablewrap"><table class="rtable"><thead><tr><th>Repair</th><th>Customer</th><th>Device</th><th>Issue</th><th>Status</th><th>Total / Due</th><th>Actions</th></tr></thead><tbody id="repairRows"></tbody></table></div>
+    </section>
+  </div>
+</div>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/repair.js"></script>
+</body>
+</html>
