@@ -4,31 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Mega Wireless Admin Test</title>
+<title>Mega Wireless Admin UI Test</title>
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:#07172d;color:#fff;min-height:100vh;display:grid;place-items:center}
-.box{width:min(420px,88vw);background:#fff;color:#07172d;padding:32px;border-radius:20px;text-align:center}
-button{padding:14px 18px;border:0;border-radius:10px;background:#087dff;color:#fff;font-weight:700;cursor:pointer}
-#status{margin-top:16px;font-size:14px;color:#555}
+html,body{margin:0;min-height:100%;}
+body{min-height:100vh;background:#07172d;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;}
+#testbox{display:block!important;visibility:visible!important;opacity:1!important;background:#ffffff!important;color:#07172d!important;width:420px;max-width:90vw;padding:36px;border:6px solid #ffd84a;border-radius:24px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.45);}
+h1{margin:0 0 12px;font-size:34px;color:#07172d!important;}
+p{font-size:18px;color:#07172d!important;}
 </style>
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-<div class="box">
-<h1>Mega Wireless Admin</h1>
-<p>If you can see this page, the admin route is working.</p>
-<button onclick="login()">Login with Netlify Identity</button>
-<div id="status">Waiting for login.</div>
+<div id="testbox">
+<h1>MEGA WIRELESS ADMIN</h1>
+<p>UI TEST — if you see this white box, the HTML is rendering correctly.</p>
 </div>
-<script>
-function login(){
-  if(!window.netlifyIdentity){document.getElementById('status').textContent='Netlify Identity failed to load';return;}
-  netlifyIdentity.open('login');
-}
-if(window.netlifyIdentity){
-  netlifyIdentity.on('init',function(user){document.getElementById('status').textContent=user?'Logged in: '+user.email:'Not logged in';});
-  netlifyIdentity.on('login',function(user){netlifyIdentity.close();document.getElementById('status').textContent='Logged in: '+user.email;});
-}
-</script>
 </body>
 </html>
