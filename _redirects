@@ -1,3 +1,8 @@
 /admin /admin.html 302!
 /admin/ /admin.html 302!
 /admin/index.html /admin.html 302!
+/pos /index.html 302!
+/pos/ /index.html 302!
+/repairs /repair.html 302!
+/repairs/ /repair.html 302!
+/repair /repair.html 302!
