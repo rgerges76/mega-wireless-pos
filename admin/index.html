@@ -1,10 +1,115 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#07172d"><title>Mega Wireless Admin</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/css/app.css"><script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script></head><body class="admin-body" onload="initAdmin()"><div class="admin-orb orb-a"></div><div class="admin-orb orb-b"></div><div id="login" class="hidden admin-login"><div class="white admin-login-card"><div class="admin-mark">MW</div><div class="admin-kicker">MEGA WIRELESS · NASHVILLE</div><h2>Admin Control Center</h2><p class="muted">Inventory, repairs, website deals, activation plans and reports in one place.</p><input id="adminEmail" class="inp" type="email" placeholder="Email" autocomplete="email"><br><br><input id="adminPass" class="inp" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin()"><br><br><button class="btn blue admin-login-btn" onclick="adminLogin()">Sign In</button><button class="admin-reset" onclick="netlifyIdentity.open('login')">Open Netlify Login</button><p id="loginErr" class="login-error"></p></div></div><div id="admin" class="hidden"><div class="appbar"><div class="admin-brand"><span class="admin-brand-logo">MW</span><div><b>MEGA WIRELESS</b><small>ADMIN CONTROL CENTER</small></div></div><div class="admin-actions"><span class="season-pill">SUMMER 2026</span><a class="pillbtn" href="../repair.html">Repairs</a><a class="pillbtn" href="../index.html">Open POS</a><button class="pillbtn" onclick="adminLogout()">Logout</button></div></div><div class="shell"><aside class="side"><div class="side-title">MANAGE</div><button data-tab="dashboard" onclick="routeAdmin('dashboard')"><span>◫</span> Dashboard</button><button data-tab="products" onclick="routeAdmin('products')"><span>▦</span> Inventory</button><button onclick="location.href='../repair.html'"><span>🛠</span> Repairs</button><button data-tab="deals" onclick="routeAdmin('deals')"><span>✦</span> Website Deals</button><button data-tab="plans" onclick="routeAdmin('plans')"><span>◉</span> Activation Plans</button><button data-tab="reports" onclick="routeAdmin('reports')"><span>↗</span> Reports</button><button data-tab="export" onclick="routeAdmin('export')"><span>⇄</span> Backup / Restore</button><div class="side-note"><b>Mega Wireless</b><small>4717 Nolensville Pike<br>Nashville, TN</small></div></aside><main class="main" id="main"></main></div></div><script src="../assets/js/app.js"></script><script>
-function waitForIdentity(){return new Promise(resolve=>{if(!window.netlifyIdentity)return resolve();if(netlifyIdentity.currentUser())return resolve();let finished=false;const done=()=>{if(finished)return;finished=true;resolve()};netlifyIdentity.on('init',done);setTimeout(done,1500)})}
-adminLogin=async function(){const err=document.getElementById('loginErr');err.textContent='';const email=document.getElementById('adminEmail').value.trim();const pass=document.getElementById('adminPass').value;if(!email||!pass){err.textContent='Enter email and password';return}if(!window.netlifyIdentity){err.textContent='Netlify Identity is not available';return}try{await netlifyIdentity.gotrue.login(email,pass,true);
-location.reload();
-return;sessionStorage.setItem('mw_admin','1');location.hash='dashboard';await initAdmin()}catch(e){console.error(e);err.textContent=e&&e.message?e.message:'Login failed'}};
-initAdmin=async function(){await waitForIdentity();const user=window.netlifyIdentity&&netlifyIdentity.currentUser();if(!user){sessionStorage.removeItem('mw_admin');document.getElementById('login').classList.remove('hidden');document.getElementById('admin').classList.add('hidden');return}sessionStorage.setItem('mw_admin','1');document.getElementById('login').classList.add('hidden');document.getElementById('admin').classList.remove('hidden');window.db=await loadSeed();routeAdmin(location.hash?location.hash.slice(1):'dashboard')};
-adminLogout=async function(){try{if(window.netlifyIdentity)await netlifyIdentity.logout()}finally{sessionStorage.removeItem('mw_admin');location.hash='';await initAdmin()}};
-if(window.netlifyIdentity){netlifyIdentity.on('login',()=>{sessionStorage.setItem('mw_admin','1')});netlifyIdentity.on('logout',()=>{sessionStorage.removeItem('mw_admin')})}
-window.addEventListener('hashchange',()=>{const tab=location.hash.slice(1);if(window.netlifyIdentity&&netlifyIdentity.currentUser()&&tab)routeAdmin(tab)});
-</script></body></html>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07172d">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Mega Wireless Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body class="admin-body">
+  <div class="admin-orb orb-a"></div>
+  <div class="admin-orb orb-b"></div>
+
+  <div id="login" class="admin-login">
+    <div class="white admin-login-card">
+      <div class="admin-mark">MW</div>
+      <div class="admin-kicker">MEGA WIRELESS · NASHVILLE</div>
+      <h2>Admin Control Center</h2>
+      <p class="muted">Secure access to inventory, repairs, website deals, activation plans and reports.</p>
+      <button class="btn blue admin-login-btn" onclick="openAdminLogin()">Login with Netlify Identity</button>
+      <p id="loginErr" class="login-error"></p>
+    </div>
+  </div>
+
+  <div id="admin" class="hidden">
+    <div class="appbar">
+      <div class="admin-brand">
+        <span class="admin-brand-logo">MW</span>
+        <div><b>MEGA WIRELESS</b><small>ADMIN CONTROL CENTER</small></div>
+      </div>
+      <div class="admin-actions">
+        <span class="season-pill">SUMMER 2026</span>
+        <a class="pillbtn" href="../repair.html">Repairs</a>
+        <a class="pillbtn" href="../index.html">Open POS</a>
+        <button class="pillbtn" onclick="adminLogout()">Logout</button>
+      </div>
+    </div>
+    <div class="shell">
+      <aside class="side">
+        <div class="side-title">MANAGE</div>
+        <button data-tab="dashboard" onclick="routeAdmin('dashboard')"><span>◫</span> Dashboard</button>
+        <button data-tab="products" onclick="routeAdmin('products')"><span>▦</span> Inventory</button>
+        <button onclick="location.href='../repair.html'"><span>🛠</span> Repairs</button>
+        <button data-tab="deals" onclick="routeAdmin('deals')"><span>✦</span> Website Deals</button>
+        <button data-tab="plans" onclick="routeAdmin('plans')"><span>◉</span> Activation Plans</button>
+        <button data-tab="reports" onclick="routeAdmin('reports')"><span>↗</span> Reports</button>
+        <button data-tab="export" onclick="routeAdmin('export')"><span>⇄</span> Backup / Restore</button>
+        <div class="side-note"><b>Mega Wireless</b><small>4717 Nolensville Pike<br>Nashville, TN</small></div>
+      </aside>
+      <main class="main" id="main"></main>
+    </div>
+  </div>
+
+  <script src="../assets/js/app.js"></script>
+  <script>
+    function showLogin(message=''){
+      document.getElementById('login').classList.remove('hidden');
+      document.getElementById('admin').classList.add('hidden');
+      document.getElementById('loginErr').textContent=message;
+    }
+
+    function openAdminLogin(){
+      if(!window.netlifyIdentity){
+        showLogin('Netlify Identity is not available.');
+        return;
+      }
+      netlifyIdentity.open('login');
+    }
+
+    async function bootAdmin(){
+      showLogin();
+      try{
+        if(!window.netlifyIdentity) return;
+        const user=netlifyIdentity.currentUser();
+        if(!user) return;
+
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('admin').classList.remove('hidden');
+        window.db=await loadSeed();
+        routeAdmin(location.hash ? location.hash.slice(1) : 'dashboard');
+      }catch(e){
+        console.error(e);
+        showLogin(e && e.message ? e.message : 'Admin failed to load');
+      }
+    }
+
+    async function adminLogout(){
+      try{
+        if(window.netlifyIdentity) await netlifyIdentity.logout();
+      }finally{
+        sessionStorage.removeItem('mw_admin');
+        showLogin();
+      }
+    }
+
+    if(window.netlifyIdentity){
+      netlifyIdentity.on('init',()=>bootAdmin());
+      netlifyIdentity.on('login',()=>{
+        netlifyIdentity.close();
+        location.reload();
+      });
+      netlifyIdentity.on('logout',()=>showLogin());
+    }
+
+    window.addEventListener('load',()=>setTimeout(bootAdmin,300));
+    window.addEventListener('hashchange',()=>{
+      const tab=location.hash.slice(1);
+      if(window.netlifyIdentity && netlifyIdentity.currentUser() && tab) routeAdmin(tab);
+    });
+  </script>
+</body>
+</html>
