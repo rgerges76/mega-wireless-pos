@@ -4,19 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Mega Wireless Admin UI Test</title>
+<title>Mega Wireless Admin Identity Test</title>
 <style>
 html,body{margin:0;min-height:100%;}
 body{min-height:100vh;background:#07172d;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;}
-#testbox{display:block!important;visibility:visible!important;opacity:1!important;background:#ffffff!important;color:#07172d!important;width:420px;max-width:90vw;padding:36px;border:6px solid #ffd84a;border-radius:24px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.45);}
+#testbox{display:block!important;visibility:visible!important;opacity:1!important;background:#fff!important;color:#07172d!important;width:420px;max-width:90vw;padding:36px;border:6px solid #ffd84a;border-radius:24px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.45);}
 h1{margin:0 0 12px;font-size:34px;color:#07172d!important;}
-p{font-size:18px;color:#07172d!important;}
+p{font-size:16px;color:#07172d!important;}
+button{padding:14px 18px;border:0;border-radius:12px;background:#087dff;color:#fff;font-size:16px;font-weight:700;cursor:pointer;width:100%;}
+#status{margin-top:14px;font-weight:700;}
 </style>
 </head>
 <body>
 <div id="testbox">
 <h1>MEGA WIRELESS ADMIN</h1>
-<p>UI TEST — if you see this white box, the HTML is rendering correctly.</p>
+<p>Identity test</p>
+<button id="loginBtn" type="button">Login with Netlify Identity</button>
+<p id="status">Loading Identity...</p>
 </div>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+(function(){
+  var status=document.getElementById('status');
+  var btn=document.getElementById('loginBtn');
+  function setStatus(t){status.textContent=t;}
+  if(!window.netlifyIdentity){setStatus('Netlify Identity failed to load');return;}
+  setStatus(netlifyIdentity.currentUser()?'Already logged in':'Identity loaded');
+  btn.onclick=function(){netlifyIdentity.open('login');};
+  netlifyIdentity.on('init',function(user){setStatus(user?'Logged in: '+user.email:'Identity ready — not logged in');});
+  netlifyIdentity.on('login',function(user){netlifyIdentity.close();setStatus('Logged in: '+user.email);});
+  netlifyIdentity.on('logout',function(){setStatus('Logged out');});
+})();
+</script>
 </body>
 </html>
