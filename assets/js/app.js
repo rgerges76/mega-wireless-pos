@@ -63,10 +63,10 @@ function mapLegacySale(s){
 function mergeLegacySales(db){
   const legacy=readJSON(LEGACY.sales,[]);
   if(!Array.isArray(legacy))return false;
-  const known=new Set(db.sales.map(s=>String(s.legacyId||s.bridgeId||s.id)));
+  const known=new Set(db.sales.map(s=>String(s.legacyId??s.bridgeId??s.id??'')));
   let changed=false;
   legacy.forEach(s=>{
-    const key=String(s.bridgeId||s.id??s.inv??s.time??'');
+    const key=String(s.bridgeId??s.id??s.inv??s.time??'');
     if(!key||known.has(key)||known.has('LEGACY:'+key))return;
     const mapped=mapLegacySale(s);db.sales.push(mapped);known.add(mapped.legacyId);changed=true;
   });
@@ -143,10 +143,10 @@ function syncLegacyInventory(db){
 
 function syncLegacySales(db){
   const old=readJSON(LEGACY.sales,[]);const arr=Array.isArray(old)?old:[];
-  const known=new Set(arr.map(s=>String(s.bridgeId||s.id??s.inv??'')));
+  const known=new Set(arr.map(s=>String(s.bridgeId??s.id??s.inv??'')));
   db.sales.forEach(s=>{
     if(s.legacyId)return;
-    const key=String(s.bridgeId||s.id||'');if(!key||known.has(key))return;
+    const key=String(s.bridgeId??s.id??'');if(!key||known.has(key))return;
     arr.push({id:s.id,bridgeId:s.id,inv:s.invoice||s.id,time:s.date||new Date().toISOString(),cashier:s.cashier||'POS',items:(s.items||[]).map(x=>({n:x.name||'',c:x.category||'',qty:Number(x.qty||1),price:Number(x.price||0),imei:x.imei||''})),sub:Number(s.subtotal||0),disc:Number(s.discount||0),tax:Number(s.tax||0),grand:Number(s.total||0),cogs:Number(s.cost||0),pay:s.payment||'',taxOn:Number(s.tax||0)>0,taxRate:Number(db.settings.taxRate||9.75)/100,cust:s.customer||null,voided:!!s.voided});known.add(key);
   });
   writeJSON(LEGACY.sales,arr);
