@@ -1,6 +1,9 @@
 /admin.html
-  X-Robots-Tag: noindex, nofollow
-  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store, no-cache, must-revalidate
+/admin/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store, no-cache, must-revalidate
 /*
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
