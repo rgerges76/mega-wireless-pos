@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Mega Wireless Admin Login Test</title>
+<style>
+html,body{margin:0;min-height:100%}
+body{min-height:100vh;background:#07172d;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+.box{background:#fff;color:#07172d;width:420px;max-width:90vw;padding:34px;border:5px solid #ffd84a;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+h1{margin:0 0 8px;text-align:center}.sub{text-align:center;color:#52647a;margin-bottom:22px}
+input{width:100%;box-sizing:border-box;padding:13px 14px;margin:7px 0;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
+button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:10px;background:#087dff;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+#status{margin-top:14px;min-height:20px;font-weight:700;font-size:14px;color:#b42318}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>MEGA WIRELESS ADMIN</h1>
+  <div class="sub">Secure POS Admin Login</div>
+  <input id="email" type="email" placeholder="Email" autocomplete="email">
+  <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+  <button type="button" onclick="login()">Sign In</button>
+  <div id="status">Ready</div>
+</div>
+<script>
+async function login(){
+  const status=document.getElementById('status');
+  const email=document.getElementById('email').value.trim();
+  const password=document.getElementById('password').value;
+  if(!email||!password){status.textContent='Enter email and password';return;}
+  status.textContent='Signing in...';
+  try{
+    const body=new URLSearchParams({grant_type:'password',username:email,password:password});
+    const r=await fetch('/.netlify/identity/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(data.error_description||data.msg||data.error||('Login failed ('+r.status+')'));
+    sessionStorage.setItem('mw_identity_token',data.access_token||'');
+    sessionStorage.setItem('mw_identity_email',email);
+    status.style.color='#087d3f';
+    status.textContent='LOGIN OK — '+email;
+  }catch(e){
+    status.style.color='#b42318';
+    status.textContent=e.message||'Login failed';
+  }
+}
+</script>
+</body>
+</html>
