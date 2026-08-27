@@ -1,7 +1,6 @@
 
 const DBKEY='mw_platform_v1';
-async function loadSeed(){let db=localStorage.getItem(DBKEY);if(db)return JSON.parse(db);async function loadSeed(){let db=localStorage.getItem(DBKEY);if(db)return JSON.parse(db);let r=await fetch('/data/seed.json');let seed=await r.json();localStorage.setItem(DBKEY,JSON.stringify(seed));return seed}let seed=await r.json();localStorage.setItem(DBKEY,JSON.stringify(seed));return seed}
-function saveDB(db){localStorage.setItem(DBKEY,JSON.stringify(db))}
+async function loadSeed(){let db=localStorage.getItem(DBKEY);if(db)return JSON.parse(db);let r=await fetch('/data/seed.json');let seed=await r.json();localStorage.setItem(DBKEY,JSON.stringify(seed));return seed}
 function money(n){return '$'+Number(n||0).toFixed(2)}
 function $(id){return document.getElementById(id)}
 const T={
