@@ -1,0 +1,3 @@
+/admin /admin.html 302!
+/admin/ /admin.html 302!
+/admin/index.html /admin.html 302!
