@@ -1,1 +1,90 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0; url=/admin/"><title>Mega Wireless Admin</title><script>location.replace('/admin/'+location.hash)</script></head><body style="font-family:Arial,sans-serif;background:#07172d;color:white;display:grid;place-items:center;min-height:100vh"><p>Opening Mega Wireless Admin…</p></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Mega Wireless POS Admin</title>
+<style>
+:root{--navy:#07172d;--navy2:#0d2748;--blue:#087dff;--cyan:#35d7ff;--gold:#ffd84a;--bg:#f4f8fc;--ink:#102033;--muted:#64748b;--line:#dce6ef;--danger:#c62828;--ok:#0a7a43}*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}button,input{font:inherit}.hidden{display:none!important}.login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,var(--navy),#0b315a);padding:20px}.login-card{width:min(430px,94vw);background:#fff;border:5px solid var(--gold);border-radius:24px;padding:32px;box-shadow:0 24px 70px rgba(0,0,0,.4)}.login-card h1{margin:0 0 8px;text-align:center}.login-card p{text-align:center;color:var(--muted)}.inp{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:11px;margin:7px 0;background:#fff}.btn{border:0;border-radius:11px;padding:12px 16px;font-weight:800;cursor:pointer}.btn.primary{background:linear-gradient(135deg,var(--blue),#425dff);color:#fff;width:100%;margin-top:9px}.btn.ghost{background:#fff;border:1px solid var(--line)}.status{min-height:22px;margin-top:12px;font-weight:700;font-size:14px;color:var(--danger)}.top{height:72px;background:linear-gradient(105deg,var(--navy),var(--navy2));color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:12px}.brand{font-weight:900;letter-spacing:.05em}.brand small{display:block;color:#9bcff6;font-size:10px;margin-top:3px}.layout{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 72px)}.side{background:#0b1e35;padding:18px}.side button{display:block;width:100%;text-align:left;background:transparent;color:#d7e8f7;border:0;border-radius:11px;padding:12px;margin:5px 0;font-weight:800;cursor:pointer}.side button.on,.side button:hover{background:#173c65}.main{padding:22px;overflow:auto}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(16,32,51,.06)}.kpi b{display:block;font-size:28px;margin-top:6px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;background:#fff}.table th,.table td{padding:11px;border-bottom:1px solid #e9eff5;text-align:left;font-size:14px;white-space:nowrap}.table th{background:#f7fafc;color:#5f6f80}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.toolbar .inp{max-width:320px;margin:0}.muted{color:var(--muted)}.ok{color:var(--ok)}.danger{color:var(--danger)}@media(max-width:850px){.layout{grid-template-columns:1fr}.side{display:flex;overflow:auto}.side button{min-width:140px}.kpis,.grid{grid-template-columns:1fr}.top{height:auto;padding:14px;align-items:flex-start}.main{padding:14px}}
+</style>
+</head>
+<body>
+<section id="login" class="login">
+  <div class="login-card">
+    <h1>MEGA WIRELESS ADMIN</h1>
+    <p>Secure POS Admin Login</p>
+    <input id="email" class="inp" type="email" placeholder="Email" autocomplete="email">
+    <input id="password" class="inp" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+    <button class="btn primary" onclick="login()">Sign In</button>
+    <div id="loginStatus" class="status">Ready</div>
+  </div>
+</section>
+
+<section id="app" class="hidden">
+  <header class="top">
+    <div class="brand">MEGA WIRELESS<small>POS ADMIN CONTROL CENTER</small></div>
+    <div><span id="who" style="margin-right:10px;font-size:13px;color:#b8d8f1"></span><button class="btn ghost" onclick="logout()">Logout</button></div>
+  </header>
+  <div class="layout">
+    <aside class="side">
+      <button data-tab="dashboard" class="on" onclick="route('dashboard')">Dashboard</button>
+      <button data-tab="inventory" onclick="route('inventory')">Inventory</button>
+      <button data-tab="deals" onclick="route('deals')">Website Deals</button>
+      <button data-tab="reports" onclick="route('reports')">Reports</button>
+      <button data-tab="backup" onclick="route('backup')">Backup / Restore</button>
+    </aside>
+    <main id="main" class="main"></main>
+  </div>
+</section>
+<script>
+const DBKEY='mw_platform_v1';
+function money(n){return '$'+Number(n||0).toFixed(2)}
+function el(id){return document.getElementById(id)}
+function saveDB(){localStorage.setItem(DBKEY,JSON.stringify(window.db))}
+async function loadDB(){
+  const saved=localStorage.getItem(DBKEY);
+  if(saved){try{return JSON.parse(saved)}catch(e){localStorage.removeItem(DBKEY)}}
+  const r=await fetch('/data/seed.json?ts='+Date.now(),{cache:'no-store'});
+  if(!r.ok)throw new Error('Could not load POS data ('+r.status+')');
+  const db=await r.json();localStorage.setItem(DBKEY,JSON.stringify(db));return db;
+}
+async function login(){
+  const status=el('loginStatus'),email=el('email').value.trim(),password=el('password').value;
+  if(!email||!password){status.textContent='Enter email and password';return}
+  status.textContent='Signing in...';status.className='status';
+  try{
+    const body=new URLSearchParams({grant_type:'password',username:email,password});
+    const r=await fetch('/.netlify/identity/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString(),cache:'no-store'});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.error_description||data.msg||data.error||('Login failed ('+r.status+')'));
+    sessionStorage.setItem('mw_identity_token',data.access_token||'');sessionStorage.setItem('mw_identity_email',email);
+    await startAdmin();
+  }catch(e){status.textContent=e.message||'Login failed'}
+}
+async function startAdmin(){
+  try{
+    el('login').classList.add('hidden');el('app').classList.remove('hidden');el('who').textContent=sessionStorage.getItem('mw_identity_email')||'';
+    window.db=await loadDB();
+    window.db.products=window.db.products||[];window.db.websiteDeals=window.db.websiteDeals||[];window.db.sales=window.db.sales||[];window.db.plans=window.db.plans||[];
+    route('dashboard');
+  }catch(e){el('app').classList.add('hidden');el('login').classList.remove('hidden');el('loginStatus').textContent=e.message||'Admin failed to load'}
+}
+function logout(){sessionStorage.removeItem('mw_identity_token');sessionStorage.removeItem('mw_identity_email');location.reload()}
+function route(tab){document.querySelectorAll('.side button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));if(tab==='dashboard')renderDashboard();if(tab==='inventory')renderInventory();if(tab==='deals')renderDeals();if(tab==='reports')renderReports();if(tab==='backup')renderBackup()}
+function renderDashboard(){const db=window.db,sales=db.sales||[],today=new Date().toISOString().slice(0,10),ts=sales.filter(s=>(s.date||'').slice(0,10)===today),rev=ts.reduce((a,s)=>a+(+s.total||0),0),low=(db.products||[]).filter(p=>(+p.qty||0)<=Number(p.minQty??db.settings?.lowStock??5)).length;el('main').innerHTML=`<div class="kpis"><div class="card kpi">Today Sales<b>${money(rev)}</b></div><div class="card kpi">Products<b>${db.products.length}</b></div><div class="card kpi">Website Deals<b>${db.websiteDeals.length}</b></div><div class="card kpi">Low Stock<b>${low}</b></div></div><div class="card"><h2>System Status</h2><p class="ok"><b>Admin loaded successfully.</b></p><p>Sales records: <b>${sales.length}</b></p><p>Store: <b>${db.settings?.storeName||'Mega Wireless'}</b></p></div>`}
+function renderInventory(){el('main').innerHTML=`<div class="card"><h2>Inventory</h2><div class="grid"><input id="pname" class="inp" placeholder="Product name"><input id="pcat" class="inp" placeholder="Category"><input id="pcost" class="inp" type="number" placeholder="Cost"><input id="pprice" class="inp" type="number" placeholder="Price"><input id="pqty" class="inp" type="number" placeholder="Qty"><input id="pmin" class="inp" type="number" placeholder="Low stock" value="5"><input id="pbar" class="inp" placeholder="Barcode / IMEI"><button class="btn primary" style="width:auto" onclick="addProduct()">Add Product</button></div><br><div class="toolbar"><input id="search" class="inp" placeholder="Search inventory..." oninput="drawProducts()"></div><div id="ptable" class="table-wrap"></div></div>`;drawProducts()}
+function drawProducts(){const q=(el('search')?.value||'').toLowerCase(),rows=window.db.products.filter(p=>!q||(p.name||'').toLowerCase().includes(q)||(p.category||'').toLowerCase().includes(q)).slice(0,500);el('ptable').innerHTML=`<table class="table"><tr><th>Name</th><th>Category</th><th>Cost</th><th>Price</th><th>Qty</th><th>Online</th></tr>${rows.map(p=>`<tr><td>${p.name||''}</td><td>${p.category||''}</td><td contenteditable onblur="editProduct('${p.id}','cost',this.textContent)">${p.cost??0}</td><td contenteditable onblur="editProduct('${p.id}','price',this.textContent)">${p.price??0}</td><td contenteditable onblur="editProduct('${p.id}','qty',this.textContent)">${p.qty??0}</td><td><input type="checkbox" ${p.showOnline?'checked':''} onchange="editProduct('${p.id}','showOnline',this.checked)"></td></tr>`).join('')}</table>`}
+function addProduct(){const id='P'+Date.now();window.db.products.unshift({id,sku:id,name:el('pname').value||'New Product',category:el('pcat').value||'Accessories',cost:+el('pcost').value||0,price:+el('pprice').value||0,qty:+el('pqty').value||0,minQty:+el('pmin').value||5,barcode:el('pbar').value||'',showOnline:false});saveDB();renderInventory()}
+function editProduct(id,k,v){const p=window.db.products.find(x=>x.id===id);if(!p)return;p[k]=k==='showOnline'?v:(['cost','price','qty'].includes(k)?(+v||0):v);saveDB()}
+function renderDeals(){const db=window.db;el('main').innerHTML=`<div class="card"><h2>Website Deals</h2><div class="grid"><input id="dname" class="inp" placeholder="Device"><input id="dspec" class="inp" placeholder="Specs"><input id="dprice" class="inp" type="number" placeholder="Price"><input id="dbadge" class="inp" placeholder="Badge"><button class="btn primary" style="width:auto" onclick="addDeal()">Add Deal</button></div><br><div class="table-wrap"><table class="table"><tr><th>Device</th><th>Specs</th><th>Price</th><th>Badge</th><th></th></tr>${db.websiteDeals.map(d=>`<tr><td>${d.name||''}</td><td>${d.spec||''}</td><td>${money(d.price)}</td><td>${d.badge||''}</td><td><button class="btn ghost" onclick="deleteDeal('${d.id}')">Delete</button></td></tr>`).join('')}</table></div></div>`}
+function addDeal(){window.db.websiteDeals.unshift({id:'D'+Date.now(),name:el('dname').value||'New Deal',spec:el('dspec').value||'',price:+el('dprice').value||0,badge:el('dbadge').value||'Deal',showOnline:true});saveDB();renderDeals()}
+function deleteDeal(id){window.db.websiteDeals=window.db.websiteDeals.filter(d=>d.id!==id);saveDB();renderDeals()}
+function renderReports(){const sales=window.db.sales||[],rev=sales.reduce((a,s)=>a+(+s.total||0),0),cost=sales.reduce((a,s)=>a+(+s.cost||0),0),inv=window.db.products.reduce((a,p)=>a+(+p.cost||0)*(+p.qty||0),0);el('main').innerHTML=`<div class="kpis"><div class="card kpi">Total Sales<b>${money(rev)}</b></div><div class="card kpi">Gross Profit<b>${money(rev-cost)}</b></div><div class="card kpi">Transactions<b>${sales.length}</b></div><div class="card kpi">Inventory Value<b>${money(inv)}</b></div></div>`}
+function renderBackup(){el('main').innerHTML=`<div class="card"><h2>Backup / Restore</h2><p class="muted">Backup saves the POS data currently stored on this computer.</p><button class="btn primary" style="width:auto" onclick="downloadBackup()">Download Backup JSON</button><br><br><textarea id="restore" class="inp" style="height:220px" placeholder="Paste backup JSON here"></textarea><button class="btn ghost" onclick="restoreBackup()">Restore</button></div>`}
+function downloadBackup(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(window.db,null,2)],{type:'application/json'}));a.download='mega-wireless-pos-backup.json';a.click()}
+function restoreBackup(){try{window.db=JSON.parse(el('restore').value);saveDB();alert('Backup restored');route('dashboard')}catch(e){alert('Invalid JSON')}}
+if(sessionStorage.getItem('mw_identity_token'))startAdmin();
+</script>
+</body>
+</html>
