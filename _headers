@@ -4,6 +4,20 @@
 /admin/*
   X-Robots-Tag: noindex, nofollow, noarchive
   Cache-Control: no-store, no-cache, must-revalidate
+/index.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store, no-cache, must-revalidate
+/pos.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store, no-cache, must-revalidate
+/repair.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store, no-cache, must-revalidate
+/assets/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+/data/seed.json
+  Cache-Control: public, max-age=0, must-revalidate
 /*
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
