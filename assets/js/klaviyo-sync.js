@@ -10,14 +10,24 @@ function loadJSON(key,def){try{var raw=localStorage.getItem(key);return raw?JSON
 function saveJSON(key,val){try{localStorage.setItem(key,JSON.stringify(val))}catch(e){console.error(e)}}
 function text(id){var el=byId(id);return el?String(el.value||'').trim():''}
 
-function patchRepair(id,email,marketingOptIn){
+function configureSmsUi(){
+  var email=byId('rEmail');
+  if(email&&email.parentElement)email.parentElement.style.display='none';
+
+  var optIn=byId('rMarketingOptIn');
+  if(optIn){
+    var span=optIn.parentElement&&optIn.parentElement.querySelector('span');
+    if(span)span.innerHTML='<strong>SMS offers opt-in.</strong> Customer agrees to receive occasional Mega Wireless promotional text messages at the phone number above. Consent is optional and not required for repair service. Leave unchecked unless the customer explicitly agrees. Message/data rates may apply. Reply STOP to opt out.';
+  }
+}
+
+function patchRepair(id,smsMarketingOptIn){
   if(!id)return null;
   var list=loadJSON(REPAIRS_KEY,[]);
   if(!Array.isArray(list))list=[];
   var record=list.find(function(r){return String(r&&r.id||'')===String(id)});
   if(record){
-    record.email=email||'';
-    record.marketingOptIn=marketingOptIn===true;
+    record.smsMarketingOptIn=smsMarketingOptIn===true;
     saveJSON(REPAIRS_KEY,list);
   }
 
@@ -25,8 +35,7 @@ function patchRepair(id,email,marketingOptIn){
   if(db&&Array.isArray(db.repairs)){
     var platformRecord=db.repairs.find(function(r){return String(r&&r.id||'')===String(id)});
     if(platformRecord){
-      platformRecord.email=email||'';
-      platformRecord.marketingOptIn=marketingOptIn===true;
+      platformRecord.smsMarketingOptIn=smsMarketingOptIn===true;
       saveJSON(DBKEY,db);
       record=platformRecord;
     }
@@ -50,8 +59,7 @@ function syncRepair(type,repair){
       id:repair.id,
       customer:repair.customer,
       phone:repair.phone,
-      email:repair.email||'',
-      marketingOptIn:repair.marketingOptIn===true,
+      smsMarketingOptIn:repair.smsMarketingOptIn===true,
       device:repair.device,
       status:repair.status,
       total:Number(repair.total||0),
@@ -80,8 +88,7 @@ function installSaveWrapper(){
     var customer=text('rCustomer');
     var phone=text('rPhone');
     var device=text('rDevice');
-    var email=text('rEmail');
-    var marketingOptIn=!!(byId('rMarketingOptIn')&&byId('rMarketingOptIn').checked);
+    var smsMarketingOptIn=!!(byId('rMarketingOptIn')&&byId('rMarketingOptIn').checked);
     var title=byId('formTitle')?byId('formTitle').textContent:'';
     var editMatch=String(title||'').match(/^Edit\s+(R\d+)/i);
     var editingId=editMatch?editMatch[1]:null;
@@ -89,8 +96,8 @@ function installSaveWrapper(){
     original.apply(this,arguments);
 
     setTimeout(function(){
-      var repair=editingId?patchRepair(editingId,email,marketingOptIn):findLatestRepair(customer,phone,device);
-      if(repair&&!editingId)repair=patchRepair(repair.id,email,marketingOptIn)||repair;
+      var repair=editingId?patchRepair(editingId,smsMarketingOptIn):findLatestRepair(customer,phone,device);
+      if(repair&&!editingId)repair=patchRepair(repair.id,smsMarketingOptIn)||repair;
       if(repair)syncRepair(editingId?'repair_updated':'repair_created',repair);
     },0);
   }
@@ -98,23 +105,20 @@ function installSaveWrapper(){
   window.saveRepair=wrappedSaveRepair;
 }
 
-function hydrateEmailOnEdit(){
+function hydrateConsentOnEdit(){
   if(typeof window.editRepair!=='function'||window.editRepair.__klaviyoWrapped)return;
   var original=window.editRepair;
   function wrappedEditRepair(id){
     original.apply(this,arguments);
     var list=loadJSON(REPAIRS_KEY,[]);
     var repair=Array.isArray(list)?list.find(function(r){return String(r.id)===String(id)}):null;
-    if(repair){
-      if(byId('rEmail'))byId('rEmail').value=repair.email||'';
-      if(byId('rMarketingOptIn'))byId('rMarketingOptIn').checked=repair.marketingOptIn===true;
-    }
+    if(repair&&byId('rMarketingOptIn'))byId('rMarketingOptIn').checked=repair.smsMarketingOptIn===true;
   }
   wrappedEditRepair.__klaviyoWrapped=true;
   window.editRepair=wrappedEditRepair;
 }
 
-function clearMarketingFields(){
+function clearConsentField(){
   var clear=window.clearRepairForm;
   if(typeof clear!=='function'||clear.__klaviyoWrapped)return;
   function wrappedClear(){
@@ -126,6 +130,6 @@ function clearMarketingFields(){
   window.clearRepairForm=wrappedClear;
 }
 
-function init(){installSaveWrapper();hydrateEmailOnEdit();clearMarketingFields()}
+function init(){configureSmsUi();installSaveWrapper();hydrateConsentOnEdit();clearConsentField()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
