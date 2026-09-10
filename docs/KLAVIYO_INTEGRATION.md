@@ -5,7 +5,7 @@ This branch adds a server-side Klaviyo event bridge for the Repair Desk with SMS
 ## What it does
 
 - Uses the repair customer's phone number as the SMS marketing contact channel.
-- Hides the email capture field from the Repair Desk integration UI.
+- Removes the email capture field from the Repair Desk integration UI.
 - Adds an explicit SMS-marketing opt-in checkbox. It is OFF by default.
 - Sends repair lifecycle events to Klaviyo through a Netlify Function.
 - Creates/updates Klaviyo customer profiles using a hashed external customer ID.
@@ -40,6 +40,13 @@ If the variable is missing, the endpoint returns 503 and the Repair Desk continu
 - The notice includes message/data-rate language and STOP opt-out language.
 - US 10-digit phone numbers are normalized to E.164 format (`+1...`) before subscription.
 - If SMS consent is checked but the phone cannot be normalized to a valid supported format, the Klaviyo sync is skipped with an error while the repair ticket itself still saves locally.
+
+## Test before production merge
+
+1. Open the Netlify Deploy Preview for `klaviyo-integration` after the latest branch commit deploys.
+2. Create a test repair with SMS opt-in OFF and confirm `Repair Ticket Created` appears in Klaviyo without an SMS marketing subscription.
+3. Create a second test repair using a phone number you control with SMS opt-in ON and confirm the Klaviyo profile is subscribed to SMS marketing.
+4. Only after both tests pass should PR #1 be merged to `main`.
 
 ## Security and privacy
 
