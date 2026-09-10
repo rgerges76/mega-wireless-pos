@@ -9,25 +9,16 @@ function byId(id){return document.getElementById(id)}
 function loadJSON(key,def){try{var raw=localStorage.getItem(key);return raw?JSON.parse(raw):def}catch(e){return def}}
 function saveJSON(key,val){try{localStorage.setItem(key,JSON.stringify(val))}catch(e){console.error(e)}}
 function text(id){var el=byId(id);return el?String(el.value||'').trim():''}
+function getRepair(id){var list=loadJSON(REPAIRS_KEY,[]);return Array.isArray(list)?list.find(function(r){return String(r&&r.id||'')===String(id)})||null:null}
 
-function configureSmsUi(){
-  var email=byId('rEmail');
-  if(email&&email.parentElement)email.parentElement.style.display='none';
-
-  var optIn=byId('rMarketingOptIn');
-  if(optIn){
-    var span=optIn.parentElement&&optIn.parentElement.querySelector('span');
-    if(span)span.innerHTML='<strong>SMS offers opt-in.</strong> Customer agrees to receive occasional Mega Wireless promotional text messages at the phone number above. Consent is optional and not required for repair service. Leave unchecked unless the customer explicitly agrees. Message/data rates may apply. Reply STOP to opt out.';
-  }
-}
-
-function patchRepair(id,smsMarketingOptIn){
+function patchRepair(id,repairSmsOptIn){
   if(!id)return null;
   var list=loadJSON(REPAIRS_KEY,[]);
   if(!Array.isArray(list))list=[];
   var record=list.find(function(r){return String(r&&r.id||'')===String(id)});
   if(record){
-    record.smsMarketingOptIn=smsMarketingOptIn===true;
+    record.repairSmsOptIn=repairSmsOptIn===true;
+    record.smsMarketingOptIn=false;
     saveJSON(REPAIRS_KEY,list);
   }
 
@@ -35,7 +26,8 @@ function patchRepair(id,smsMarketingOptIn){
   if(db&&Array.isArray(db.repairs)){
     var platformRecord=db.repairs.find(function(r){return String(r&&r.id||'')===String(id)});
     if(platformRecord){
-      platformRecord.smsMarketingOptIn=smsMarketingOptIn===true;
+      platformRecord.repairSmsOptIn=repairSmsOptIn===true;
+      platformRecord.smsMarketingOptIn=false;
       saveJSON(DBKEY,db);
       record=platformRecord;
     }
@@ -59,7 +51,7 @@ function syncRepair(type,repair){
       id:repair.id,
       customer:repair.customer,
       phone:repair.phone,
-      smsMarketingOptIn:repair.smsMarketingOptIn===true,
+      repairSmsOptIn:repair.repairSmsOptIn===true,
       device:repair.device,
       status:repair.status,
       total:Number(repair.total||0),
@@ -88,21 +80,42 @@ function installSaveWrapper(){
     var customer=text('rCustomer');
     var phone=text('rPhone');
     var device=text('rDevice');
-    var smsMarketingOptIn=!!(byId('rMarketingOptIn')&&byId('rMarketingOptIn').checked);
+    var repairSmsOptIn=!!(byId('rRepairSmsOptIn')&&byId('rRepairSmsOptIn').checked);
+    var requestedStatus=text('rStatus');
     var title=byId('formTitle')?byId('formTitle').textContent:'';
     var editMatch=String(title||'').match(/^Edit\s+(R\d+)/i);
     var editingId=editMatch?editMatch[1]:null;
+    var before=editingId?getRepair(editingId):null;
+    var beforeStatus=before?String(before.status||''):'';
 
     original.apply(this,arguments);
 
     setTimeout(function(){
-      var repair=editingId?patchRepair(editingId,smsMarketingOptIn):findLatestRepair(customer,phone,device);
-      if(repair&&!editingId)repair=patchRepair(repair.id,smsMarketingOptIn)||repair;
-      if(repair)syncRepair(editingId?'repair_updated':'repair_created',repair);
+      var repair=editingId?patchRepair(editingId,repairSmsOptIn):findLatestRepair(customer,phone,device);
+      if(repair&&!editingId)repair=patchRepair(repair.id,repairSmsOptIn)||repair;
+      if(!repair)return;
+
+      var becameReady=editingId&&beforeStatus!=='Ready for Pickup'&&String(repair.status||requestedStatus)==='Ready for Pickup';
+      if(becameReady)syncRepair('repair_ready_for_pickup',repair);
+      else syncRepair(editingId?'repair_updated':'repair_created',repair);
     },0);
   }
   wrappedSaveRepair.__klaviyoWrapped=true;
   window.saveRepair=wrappedSaveRepair;
+}
+
+function installSendToPosWrapper(){
+  if(typeof window.sendToPOS!=='function'||window.sendToPOS.__klaviyoWrapped)return;
+  var original=window.sendToPOS;
+  function wrappedSendToPOS(id){
+    var before=getRepair(id);
+    var wasReady=before&&before.status==='Ready for Pickup';
+    original.apply(this,arguments);
+    var after=getRepair(id);
+    if(after&&!wasReady&&after.status==='Ready for Pickup')syncRepair('repair_ready_for_pickup',after);
+  }
+  wrappedSendToPOS.__klaviyoWrapped=true;
+  window.sendToPOS=wrappedSendToPOS;
 }
 
 function hydrateConsentOnEdit(){
@@ -110,9 +123,8 @@ function hydrateConsentOnEdit(){
   var original=window.editRepair;
   function wrappedEditRepair(id){
     original.apply(this,arguments);
-    var list=loadJSON(REPAIRS_KEY,[]);
-    var repair=Array.isArray(list)?list.find(function(r){return String(r.id)===String(id)}):null;
-    if(repair&&byId('rMarketingOptIn'))byId('rMarketingOptIn').checked=repair.smsMarketingOptIn===true;
+    var repair=getRepair(id);
+    if(repair&&byId('rRepairSmsOptIn'))byId('rRepairSmsOptIn').checked=repair.repairSmsOptIn===true;
   }
   wrappedEditRepair.__klaviyoWrapped=true;
   window.editRepair=wrappedEditRepair;
@@ -123,13 +135,12 @@ function clearConsentField(){
   if(typeof clear!=='function'||clear.__klaviyoWrapped)return;
   function wrappedClear(){
     clear.apply(this,arguments);
-    if(byId('rEmail'))byId('rEmail').value='';
-    if(byId('rMarketingOptIn'))byId('rMarketingOptIn').checked=false;
+    if(byId('rRepairSmsOptIn'))byId('rRepairSmsOptIn').checked=false;
   }
   wrappedClear.__klaviyoWrapped=true;
   window.clearRepairForm=wrappedClear;
 }
 
-function init(){configureSmsUi();installSaveWrapper();hydrateConsentOnEdit();clearConsentField()}
+function init(){installSaveWrapper();installSendToPosWrapper();hydrateConsentOnEdit();clearConsentField()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
