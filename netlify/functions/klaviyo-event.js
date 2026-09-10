@@ -50,8 +50,12 @@ async function klaviyo(path, method, apiKey, body) {
     throw new Error(`Klaviyo ${response.status}: ${text.slice(0, 500)}`);
   }
 
-  if (response.status === 204) return null;
-  return response.json();
+  // Klaviyo's async write endpoints (including profile subscription jobs
+  // and event creation) return 202 Accepted with no response body.
+  if (response.status === 202 || response.status === 204) return null;
+
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 exports.handler = async function handler(event) {
