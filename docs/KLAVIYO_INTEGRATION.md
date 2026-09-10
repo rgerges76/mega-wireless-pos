@@ -1,57 +1,69 @@
-# Mega Wireless Klaviyo integration
+# Mega Wireless Klaviyo repair SMS integration
 
-This branch adds a server-side Klaviyo event bridge for the Repair Desk with SMS-first marketing consent.
+This branch adds a server-side Klaviyo event bridge for transactional Repair Desk text updates.
 
-## What it does
+## Intended workflow
 
-- Uses the repair customer's phone number as the SMS marketing contact channel.
-- Removes the email capture field from the Repair Desk integration UI.
-- Adds an explicit SMS-marketing opt-in checkbox. It is OFF by default.
-- Sends repair lifecycle events to Klaviyo through a Netlify Function.
-- Creates/updates Klaviyo customer profiles using a hashed external customer ID.
-- Does not send IMEI, serial number, diagnosis, or repair issue text to Klaviyo.
-- Does not block repair ticket saving if Klaviyo is unavailable.
-- Sends the raw phone number to Klaviyo only when the customer explicitly opts in to SMS marketing.
-- Subscribes the phone number to SMS marketing only when the customer explicitly opts in.
+1. At repair intake, staff enters the customer's phone number.
+2. Staff asks whether the customer wants automated text updates for this repair.
+3. `Text repair status updates` is OFF by default and is checked only after explicit consent.
+4. The repair is saved normally even if Klaviyo is unavailable.
+5. When the repair transitions to `Ready for Pickup`, the POS emits one `Repair Ready for Pickup` event for that repair.
+6. A Klaviyo metric-triggered SMS flow sends the ready-for-pickup text to the consenting customer.
+
+The repair-status consent is not promotional consent. Profiles created through this path are marked `repair_sms_only: true` and `sms_marketing_eligible: false` so they must not be targeted by promotional SMS campaigns unless separate promotional consent is collected later.
 
 ## Klaviyo events
 
 - `Repair Ticket Created`
 - `Repair Ticket Updated`
-- `Repair Status Changed` (server endpoint supported for future UI wiring)
+- `Repair Status Changed`
+- `Repair Ready for Pickup`
 
-Event properties are limited to repair ID, device, status, total, balance, and store.
+The ready event uses a fixed unique ID based on the repair ID so repeated saves of the same Ready status do not create duplicate ready events.
+
+Event properties are limited to repair ID, device, status, total, balance, store, and notification type. IMEI/serial, diagnosis, and issue text are not sent.
+
+## Ready-for-pickup message
+
+Recommended transactional SMS body:
+
+`Mega Wireless: Hi {{ first_name }}, your {{ event.device }} is ready for pickup. Reply STOP to opt out.`
+
+Keep the flow transactional and do not add promotions, coupons, or sales language to this message.
 
 ## Required Netlify environment variable
 
-Set this only in Netlify environment variables, never in browser JavaScript or the repository:
+Set only in Netlify environment variables, never in browser JavaScript or the repository:
 
 `KLAVIYO_PRIVATE_API_KEY`
 
-The key should use least-privilege Klaviyo scopes sufficient for Events, Profiles, and Subscriptions.
+The current integration requires Events, Profiles, and Subscriptions access. The private key remains server-side.
 
-If the variable is missing, the endpoint returns 503 and the Repair Desk continues working normally.
+## Consent and phone handling
 
-## SMS consent behavior
-
-- Consent is explicit and unchecked by default.
-- The checkbox states that the customer agrees to occasional Mega Wireless promotional text messages.
+- Repair SMS consent is explicit and unchecked by default.
 - Consent is optional and not required for repair service.
-- The notice includes message/data-rate language and STOP opt-out language.
-- US 10-digit phone numbers are normalized to E.164 format (`+1...`) before subscription.
-- If SMS consent is checked but the phone cannot be normalized to a valid supported format, the Klaviyo sync is skipped with an error while the repair ticket itself still saves locally.
+- The notice includes message/data-rate and STOP opt-out language.
+- US 10-digit phone numbers are normalized to E.164 (`+1...`).
+- Without consent, the raw phone is not sent to Klaviyo; it is used server-side only to derive a one-way hashed external ID.
+- With repair SMS consent, the normalized phone is sent to Klaviyo and SMS channel consent is recorded so Klaviyo can deliver the transactional repair flow.
+- The profile remains explicitly marked as not eligible for promotional SMS targeting.
 
 ## Test before production merge
 
-1. Open the Netlify Deploy Preview for `klaviyo-integration` after the latest branch commit deploys.
-2. Create a test repair with SMS opt-in OFF and confirm `Repair Ticket Created` appears in Klaviyo without an SMS marketing subscription.
-3. Create a second test repair using a phone number you control with SMS opt-in ON and confirm the Klaviyo profile is subscribed to SMS marketing.
-4. Only after both tests pass should PR #1 be merged to `main`.
+1. Wait for the latest `klaviyo-integration` Netlify Deploy Preview.
+2. Create a test repair using a phone number you control and check `Text repair status updates`.
+3. Confirm `Repair Ticket Created` appears in Klaviyo and the test phone has SMS consent.
+4. Edit the same repair and change status to `Ready for Pickup` (or use Send to POS when applicable).
+5. Confirm exactly one `Repair Ready for Pickup` event appears.
+6. Configure the Klaviyo SMS flow to trigger on `Repair Ready for Pickup`, mark the SMS as transactional, and test delivery.
+7. Only after the full test passes should PR #1 be merged to `main`.
 
-## Security and privacy
+## Security and reliability
 
 - Private API key is server-side only.
 - Operational repair data is minimized before it is sent to Klaviyo.
-- Without SMS marketing consent, the phone is used server-side only to derive a one-way hashed external ID; the raw phone number is not sent to Klaviyo by this integration.
-- With explicit SMS marketing consent, the normalized phone number is sent to Klaviyo so the profile can be subscribed to SMS marketing.
-- Klaviyo sync failures are non-blocking and logged in the browser console / Netlify function logs.
+- Klaviyo failures do not block repair ticket saving.
+- Ready events are idempotent in Klaviyo using `repairId:ready_for_pickup` as the unique event identifier.
+- Current repair storage remains browser localStorage; this integration does not convert the POS into a multi-device database-backed system.
