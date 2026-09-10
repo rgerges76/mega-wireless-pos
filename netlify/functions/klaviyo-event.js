@@ -47,11 +47,9 @@ async function klaviyo(path, method, apiKey, body) {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Klaviyo ${response.status}: ${text.slice(0, 500)}`);
+    throw new Error(`Klaviyo ${response.status} ${path}: ${text.slice(0, 800)}`);
   }
 
-  // Klaviyo's async write endpoints (including profile subscription jobs
-  // and event creation) return 202 Accepted with no response body.
   if (response.status === 202 || response.status === 204) return null;
 
   const text = await response.text();
@@ -149,36 +147,60 @@ exports.handler = async function handler(event) {
     }
   };
 
-  try {
-    // This consent is specifically for transactional repair-status SMS.
-    // It must remain separate from promotional/marketing SMS consent.
-    if (repairSmsOptIn) {
-      const subscribeBody = {
-        data: {
-          type: 'profile-subscription-bulk-create-job',
-          attributes: {
-            custom_source: 'Mega Wireless Repair Status Updates',
-            profiles: {
-              data: [{
-                type: 'profile',
-                attributes: {
-                  phone_number: phoneNumber,
-                  subscriptions: {
-                    sms: { transactional: { consent: 'SUBSCRIBED' } }
-                  }
+  let smsConsentRecorded = !repairSmsOptIn;
+  let smsConsentError = null;
+
+  if (repairSmsOptIn) {
+    const subscribeBody = {
+      data: {
+        type: 'profile-subscription-bulk-create-job',
+        attributes: {
+          custom_source: 'Mega Wireless Repair Status Updates',
+          profiles: {
+            data: [{
+              type: 'profile',
+              attributes: {
+                phone_number: phoneNumber,
+                subscriptions: {
+                  sms: { transactional: { consent: 'SUBSCRIBED' } }
                 }
-              }]
-            }
+              }
+            }]
           }
         }
-      };
-      await klaviyo('/profile-subscription-bulk-create-jobs', 'POST', apiKey, subscribeBody);
-    }
+      }
+    };
 
-    await klaviyo('/events', 'POST', apiKey, eventBody);
-    return json(202, { ok: true, event: eventName, repair_sms_opt_in: repairSmsOptIn });
-  } catch (err) {
-    console.error('Klaviyo sync failed', err);
-    return json(502, { error: 'Klaviyo sync failed' });
+    try {
+      await klaviyo('/profile-subscription-bulk-create-jobs', 'POST', apiKey, subscribeBody);
+      smsConsentRecorded = true;
+    } catch (err) {
+      smsConsentError = err.message || String(err);
+      console.error('Klaviyo transactional SMS consent failed', smsConsentError);
+    }
   }
+
+  try {
+    await klaviyo('/events', 'POST', apiKey, eventBody);
+  } catch (err) {
+    console.error('Klaviyo event sync failed', err.message || err);
+    return json(502, { error: 'Klaviyo event sync failed' });
+  }
+
+  if (smsConsentError) {
+    return json(207, {
+      ok: true,
+      event: eventName,
+      repair_sms_opt_in: repairSmsOptIn,
+      sms_consent_recorded: false,
+      warning: 'Transactional SMS consent could not be recorded'
+    });
+  }
+
+  return json(202, {
+    ok: true,
+    event: eventName,
+    repair_sms_opt_in: repairSmsOptIn,
+    sms_consent_recorded: smsConsentRecorded
+  });
 };
