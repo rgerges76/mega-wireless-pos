@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
 const KLAVIYO_API = 'https://a.klaviyo.com/api';
-const REVISION = '2026-01-15';
+const REVISION = '2026-07-15';
 
 function json(statusCode, body) {
   return {
@@ -14,17 +14,21 @@ function json(statusCode, body) {
   };
 }
 
-function normalizeEmail(value) {
-  const email = String(value || '').trim().toLowerCase();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
+function normalizePhoneE164(value) {
+  const raw = String(value || '').trim();
+  const digits = raw.replace(/\D/g, '');
+  if (raw.startsWith('+') && digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return '';
 }
 
 function normalizePhoneDigits(value) {
   return String(value || '').replace(/\D/g, '').slice(-15);
 }
 
-function customerExternalId(phone, email) {
-  const source = normalizePhoneDigits(phone) || normalizeEmail(email);
+function customerExternalId(phone) {
+  const source = normalizePhoneDigits(phone);
   if (!source) return '';
   return 'mw_' + crypto.createHash('sha256').update(source).digest('hex').slice(0, 24);
 }
@@ -70,10 +74,15 @@ exports.handler = async function handler(event) {
 
   const repairId = String(repair.id || '').trim();
   const customer = String(repair.customer || '').trim().slice(0, 120);
-  const email = normalizeEmail(repair.email);
-  const externalId = customerExternalId(repair.phone, email);
+  const externalId = customerExternalId(repair.phone);
+  const phoneNumber = normalizePhoneE164(repair.phone);
+  const smsMarketingOptIn = repair.smsMarketingOptIn === true;
+
   if (!repairId || !customer || !externalId) {
     return json(400, { error: 'Missing required repair/customer identity fields' });
+  }
+  if (smsMarketingOptIn && !phoneNumber) {
+    return json(400, { error: 'Valid phone number required for SMS opt-in' });
   }
 
   const status = String(repair.status || 'Received').slice(0, 80);
@@ -91,10 +100,12 @@ exports.handler = async function handler(event) {
       store: 'Mega Wireless Nashville',
       last_repair_id: repairId,
       last_repair_device: String(repair.device || '').slice(0, 120),
-      last_repair_status: status
+      last_repair_status: status,
+      sms_marketing_opt_in: smsMarketingOptIn
     }
   };
-  if (email) profileAttributes.email = email;
+
+  if (smsMarketingOptIn) profileAttributes.phone_number = phoneNumber;
 
   const eventBody = {
     data: {
@@ -128,7 +139,7 @@ exports.handler = async function handler(event) {
   try {
     await klaviyo('/events', 'POST', apiKey, eventBody);
 
-    if (email && repair.marketingOptIn === true) {
+    if (smsMarketingOptIn) {
       const subscribeBody = {
         data: {
           type: 'profile-subscription-bulk-create-job',
@@ -138,9 +149,9 @@ exports.handler = async function handler(event) {
               data: [{
                 type: 'profile',
                 attributes: {
-                  email,
+                  phone_number: phoneNumber,
                   subscriptions: {
-                    email: { marketing: { consent: 'SUBSCRIBED' } }
+                    sms: { marketing: { consent: 'SUBSCRIBED' } }
                   }
                 }
               }]
