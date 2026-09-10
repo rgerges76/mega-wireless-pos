@@ -69,28 +69,30 @@ exports.handler = async function handler(event) {
 
   const type = String(payload.type || '').trim();
   const repair = payload.repair || {};
-  const allowedTypes = new Set(['repair_created', 'repair_updated', 'repair_status_changed']);
+  const allowedTypes = new Set(['repair_created', 'repair_updated', 'repair_status_changed', 'repair_ready_for_pickup']);
   if (!allowedTypes.has(type)) return json(400, { error: 'Unsupported event type' });
 
   const repairId = String(repair.id || '').trim();
   const customer = String(repair.customer || '').trim().slice(0, 120);
   const externalId = customerExternalId(repair.phone);
   const phoneNumber = normalizePhoneE164(repair.phone);
-  const smsMarketingOptIn = repair.smsMarketingOptIn === true;
+  const repairSmsOptIn = repair.repairSmsOptIn === true;
 
   if (!repairId || !customer || !externalId) {
     return json(400, { error: 'Missing required repair/customer identity fields' });
   }
-  if (smsMarketingOptIn && !phoneNumber) {
-    return json(400, { error: 'Valid phone number required for SMS opt-in' });
+  if (repairSmsOptIn && !phoneNumber) {
+    return json(400, { error: 'Valid phone number required for repair SMS updates' });
   }
 
   const status = String(repair.status || 'Received').slice(0, 80);
   const eventName = type === 'repair_created'
     ? 'Repair Ticket Created'
-    : type === 'repair_status_changed'
-      ? 'Repair Status Changed'
-      : 'Repair Ticket Updated';
+    : type === 'repair_ready_for_pickup'
+      ? 'Repair Ready for Pickup'
+      : type === 'repair_status_changed'
+        ? 'Repair Status Changed'
+        : 'Repair Ticket Updated';
 
   const profileAttributes = {
     external_id: externalId,
@@ -101,17 +103,23 @@ exports.handler = async function handler(event) {
       last_repair_id: repairId,
       last_repair_device: String(repair.device || '').slice(0, 120),
       last_repair_status: status,
-      sms_marketing_opt_in: smsMarketingOptIn
+      repair_sms_opt_in: repairSmsOptIn,
+      repair_sms_only: repairSmsOptIn,
+      sms_marketing_eligible: false
     }
   };
 
-  if (smsMarketingOptIn) profileAttributes.phone_number = phoneNumber;
+  if (repairSmsOptIn) profileAttributes.phone_number = phoneNumber;
+
+  const uniqueId = type === 'repair_ready_for_pickup'
+    ? `${repairId}:ready_for_pickup`
+    : `${repairId}:${type}:${String(repair.updatedAt || repair.createdAt || Date.now())}`;
 
   const eventBody = {
     data: {
       type: 'event',
       attributes: {
-        unique_id: `${repairId}:${type}:${String(repair.updatedAt || repair.createdAt || Date.now())}`,
+        unique_id: uniqueId,
         metric: {
           data: {
             type: 'metric',
@@ -130,21 +138,23 @@ exports.handler = async function handler(event) {
           status,
           total: Number(repair.total || 0),
           balance: Number(repair.balance || 0),
-          store: 'Mega Wireless Nashville'
+          store: 'Mega Wireless Nashville',
+          notification_type: type === 'repair_ready_for_pickup' ? 'transactional_repair_ready' : 'repair_lifecycle'
         }
       }
     }
   };
 
   try {
-    await klaviyo('/events', 'POST', apiKey, eventBody);
-
-    if (smsMarketingOptIn) {
+    // Klaviyo uses SMS channel consent for SMS delivery. This consent is captured
+    // specifically for repair-status texts; the profile is explicitly marked as
+    // not eligible for promotional SMS targeting.
+    if (repairSmsOptIn) {
       const subscribeBody = {
         data: {
           type: 'profile-subscription-bulk-create-job',
           attributes: {
-            custom_source: 'Mega Wireless Repair Desk',
+            custom_source: 'Mega Wireless Repair Status Updates',
             profiles: {
               data: [{
                 type: 'profile',
@@ -162,7 +172,8 @@ exports.handler = async function handler(event) {
       await klaviyo('/profile-subscription-bulk-create-jobs', 'POST', apiKey, subscribeBody);
     }
 
-    return json(202, { ok: true });
+    await klaviyo('/events', 'POST', apiKey, eventBody);
+    return json(202, { ok: true, event: eventName, repair_sms_opt_in: repairSmsOptIn });
   } catch (err) {
     console.error('Klaviyo sync failed', err);
     return json(502, { error: 'Klaviyo sync failed' });
