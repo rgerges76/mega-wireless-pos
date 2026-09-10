@@ -11,7 +11,7 @@ This branch adds a server-side Klaviyo event bridge for transactional Repair Des
 5. When the repair transitions to `Ready for Pickup`, the POS emits one `Repair Ready for Pickup` event for that repair.
 6. A Klaviyo metric-triggered SMS flow sends the ready-for-pickup text to the consenting customer.
 
-The repair-status consent is not promotional consent. Profiles created through this path are marked `repair_sms_only: true` and `sms_marketing_eligible: false` so they must not be targeted by promotional SMS campaigns unless separate promotional consent is collected later.
+The repair-status consent is **transactional SMS consent**, not promotional consent. The API records `subscriptions.sms.transactional.consent = SUBSCRIBED`. Profiles created through this path are marked `repair_sms_only: true` and `sms_marketing_eligible: false` so they must not be targeted by promotional SMS campaigns unless separate promotional consent is collected later.
 
 ## Klaviyo events
 
@@ -47,18 +47,20 @@ The current integration requires Events, Profiles, and Subscriptions access. The
 - The notice includes message/data-rate and STOP opt-out language.
 - US 10-digit phone numbers are normalized to E.164 (`+1...`).
 - Without consent, the raw phone is not sent to Klaviyo; it is used server-side only to derive a one-way hashed external ID.
-- With repair SMS consent, the normalized phone is sent to Klaviyo and SMS channel consent is recorded so Klaviyo can deliver the transactional repair flow.
+- With repair SMS consent, the normalized phone is sent to Klaviyo and **transactional SMS consent** is recorded.
+- Promotional SMS consent is not granted by this workflow.
 - The profile remains explicitly marked as not eligible for promotional SMS targeting.
 
 ## Test before production merge
 
 1. Wait for the latest `klaviyo-integration` Netlify Deploy Preview.
 2. Create a test repair using a phone number you control and check `Text repair status updates`.
-3. Confirm `Repair Ticket Created` appears in Klaviyo and the test phone has SMS consent.
+3. Confirm `Repair Ticket Created` appears in Klaviyo and the test phone has transactional SMS consent.
 4. Edit the same repair and change status to `Ready for Pickup` (or use Send to POS when applicable).
 5. Confirm exactly one `Repair Ready for Pickup` event appears.
 6. Configure the Klaviyo SMS flow to trigger on `Repair Ready for Pickup`, mark the SMS as transactional, and test delivery.
-7. Only after the full test passes should PR #1 be merged to `main`.
+7. Save the same Ready repair again and confirm no second Ready event/SMS is generated.
+8. Only after the full test passes should PR #1 be merged to `main`.
 
 ## Security and reliability
 
