@@ -146,9 +146,8 @@ exports.handler = async function handler(event) {
   };
 
   try {
-    // Klaviyo uses SMS channel consent for SMS delivery. This consent is captured
-    // specifically for repair-status texts; the profile is explicitly marked as
-    // not eligible for promotional SMS targeting.
+    // This consent is specifically for transactional repair-status SMS.
+    // It must remain separate from promotional/marketing SMS consent.
     if (repairSmsOptIn) {
       const subscribeBody = {
         data: {
@@ -161,7 +160,7 @@ exports.handler = async function handler(event) {
                 attributes: {
                   phone_number: phoneNumber,
                   subscriptions: {
-                    sms: { marketing: { consent: 'SUBSCRIBED' } }
+                    sms: { transactional: { consent: 'SUBSCRIBED' } }
                   }
                 }
               }]
