@@ -321,10 +321,10 @@ tr:hover td{background:rgba(0,122,255,.02)}
    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
     <div><div style="font-weight:700;font-size:15px">Reports</div><div style="font-size:11px;color:#8e8e93">Nashville TN · Tax 9.75%</div></div>
     <div style="display:flex;gap:7px;flex-wrap:wrap">
-     <select class="ii" id="rptf" onchange="renderRpts()" style="font-size:11px;padding:6px 10px">
-      <option value="today">Today</option><option value="week">This Week</option><option value="month">This Month</option><option value="all" selected>All Time</option>
+     <select class="ii" id="rptf" onchange="toggleReportDates();renderRpts()" style="font-size:11px;padding:6px 10px">
+      <option value="today">Today</option><option value="week">Last 7 Days</option><option value="month">This Month</option><option value="custom">Custom Dates</option><option value="all" selected>All Time</option>
      </select>
-     <button class="sndbtn" onclick="sendReport()">Send Report</button>
+     <span id="rptdates" style="display:none;align-items:center;gap:5px"><label>From <input class="ii" type="date" id="rptstart" onchange="renderRpts()"></label><label>To <input class="ii" type="date" id="rptend" onchange="renderRpts()"></label></span><button class="sndbtn" onclick="sendReport()">Send Report</button>
      <button onclick="clearSales()" style="background:transparent;border:1px solid rgba(255,59,48,.3);border-radius:8px;padding:6px 11px;color:#ff3b30;cursor:pointer;font-family:inherit;font-size:10px">Clear Data</button>
     </div>
    </div>
@@ -1355,20 +1355,34 @@ function getTodaySales(){
   for(var i=0;i<sales.length;i++)if(new Date(sales[i].time).toDateString()===today)res.push(sales[i]);
   return res;
 }
+function toggleReportDates(){
+ var el=document.getElementById('rptdates'),sel=document.getElementById('rptf');
+ if(el&&sel)el.style.display=sel.value==='custom'?'inline-flex':'none';
+}
+function reportDateKey(d){
+ var x=new Date(d);if(isNaN(x.getTime()))return '';
+ return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
+}
+function getReportSales(){
+ var el=document.getElementById('rptf'),f=el?el.value:'all',now=new Date();
+ var from=document.getElementById('rptstart'),to=document.getElementById('rptend');
+ var start=from?from.value:'',end=to?to.value:'';
+ if(f==='custom'&&start&&end&&start>end){toast('From date must be before To date','err');return [];}
+ return sales.filter(function(s){
+  var d=new Date(s.time),key=reportDateKey(d);
+  if(f==='today')return key===reportDateKey(now);
+  if(f==='week'){var w=new Date(now);w.setDate(w.getDate()-6);return key>=reportDateKey(w)&&key<=reportDateKey(now);}
+  if(f==='month')return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+  if(f==='custom')return (!start||key>=start)&&(!end||key<=end);
+  return true;
+ });
+}
 function renderRpts(){
-  var el=document.getElementById('rptf'),f=el?el.value:'all';
-  var now=new Date(),filtered=[],i;
-  for(i=0;i<sales.length;i++){
-    var d=new Date(sales[i].time);
-    if(f==='today'&&d.toDateString()!==now.toDateString())continue;
-    if(f==='week'){var w=new Date(now);w.setDate(w.getDate()-7);if(d<w)continue;}
-    if(f==='month'&&(d.getMonth()!==now.getMonth()||d.getFullYear()!==now.getFullYear()))continue;
-    filtered.push(sales[i]);
-  }
+  var filtered=getReportSales(),i;
   var rev=0,tax=0,units=0,cogs=0,disc=0,cashTot=0,cardTot=0,zelleTot=0,voidCount=0;
   for(i=0;i<filtered.length;i++){
     var s=filtered[i];
-    if(s.voided){voidCount++;continue;}
+    if(s.voided||s.refunded){voidCount++;continue;}
     rev+=s.grand;tax+=s.tax;cogs+=(s.cogs||0);disc+=(s.disc||0);
     units+=s.items.reduce(function(a,it){return a+it.qty;},0);
     if(s.pay==='cash')cashTot+=s.grand;else if(s.pay==='card')cardTot+=s.grand;else zelleTot+=s.grand;
@@ -1377,7 +1391,7 @@ function renderRpts(){
   var profit=netSales-cogs;
   var margin=netSales>0?(profit/netSales*100):0;
   var ts=getTodaySales(),tcash=0;
-  for(i=0;i<ts.length;i++)if(!ts[i].voided&&ts[i].pay==='cash')tcash+=ts[i].grand;
+  for(i=0;i<ts.length;i++)if(!ts[i].voided&&!ts[i].refunded&&ts[i].pay==='cash')tcash+=ts[i].grand;
   document.getElementById('rcards').innerHTML=
     '<div class="rc"><div class="rl">Revenue</div><div class="rv" style="color:#007aff">$'+rev.toFixed(2)+'</div><div class="rsb">'+(filtered.length-voidCount)+' sales'+(voidCount?(' · '+voidCount+' voided'):'')+'</div></div>'+
     '<div class="rc"><div class="rl">Gross Profit</div><div class="rv" style="color:'+(profit>=0?'#34c759':'#ff3b30')+'">$'+profit.toFixed(2)+'</div><div class="rsb">'+margin.toFixed(1)+'% margin</div></div>'+
@@ -1439,7 +1453,7 @@ function renderRpts(){
 }
 function clearSales(){if(confirm('Clear ALL sales data?')){sales=[];sv('sales',sales);renderRpts();toast('Cleared','ok');}}
 function sendReport(){
-  var today=new Date(),ts=getTodaySales(),rev=0,tax=0,units=0,cogs=0,i;
+  var today=new Date(),ts=getReportSales(),rev=0,tax=0,units=0,cogs=0,i;
   var cash=0,card=0,zelle=0,voided=0;
   for(i=0;i<ts.length;i++){
     if(ts[i].voided||ts[i].refunded){voided++;continue;}
@@ -1449,7 +1463,7 @@ function sendReport(){
   }
   var profit=(rev-tax)-cogs;
   var closing=OB+cash;
-  var ds=today.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  var ds=(document.getElementById('rptf')?.value==='custom')?('Custom period: '+(document.getElementById('rptstart')?.value||'start')+' to '+(document.getElementById('rptend')?.value||'end')):('Report: '+(document.getElementById('rptf')?.selectedOptions[0]?.textContent||'All Time')+' · '+today.toLocaleDateString('en-US'));
   var ct=new Date().toDateString();
   var cl=clkLog.filter(function(l){return new Date(l.time).toDateString()===ct;});
   var clStr=cl.map(function(l){var t=new Date(l.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});return l.name+': '+l.act+' at '+t+(l.dur!=='-'?' ('+l.dur+')':'');}).join('\n')||'No events';
@@ -1457,7 +1471,7 @@ function sendReport(){
   var lsStr=getLSItems().map(function(i){return i.n.substring(0,25)+' ('+i.qty+' left)';}).join('\n')||'None';
   var ovArr=[];
   for(i=0;i<ts.length;i++){
-    if(ts[i].voided||!ts[i].overrides)continue;
+    if(ts[i].voided||ts[i].refunded||!ts[i].overrides)continue;
     for(var j=0;j<ts[i].overrides.length;j++){
       var o=ts[i].overrides[j];
       ovArr.push(ts[i].inv+' | '+ts[i].cashier.split(' ')[0]+' | '+o.n.substring(0,22)+' | $'+o.from.toFixed(2)+' -> $'+o.to.toFixed(2)+(o.reason?' ('+o.reason+')':''));
